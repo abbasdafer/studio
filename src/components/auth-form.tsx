@@ -10,7 +10,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where, updateDoc, runTransaction } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
 
 
 import { Button } from "@/components/ui/button";
@@ -56,35 +56,39 @@ const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' |
     const q = query(promoCodesRef, where("code", "==", code));
 
     try {
-        let promoDetails: { id: string, type: 'monthly' | 'yearly' } | null = null;
+        let promoDetails: { type: 'monthly' | 'yearly' } | null = null;
         
         await runTransaction(db, async (transaction) => {
-            const promoSnap = await getDocs(q);
+            const promoSnap = await transaction.get(q);
+
             if (promoSnap.empty) {
                 throw new Error("Invalid or expired promo code.");
             }
 
             const promoDoc = promoSnap.docs[0];
-            const promoData = promoDoc.data() as PromoCode;
+            const promoData = promoDoc.data() as Omit<PromoCode, 'id'>;
             
             if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
-                throw new Error("Invalid or expired promo code.");
+                throw new Error("This promo code has been fully used or is inactive.");
             }
 
-            // Increment uses and update status if max uses is reached
             const newUses = promoData.uses + 1;
             const newStatus = newUses >= promoData.maxUses ? 'used' : 'active';
             
             transaction.update(promoDoc.ref, { uses: newUses, status: newStatus });
             
-            promoDetails = { id: promoDoc.id, type: promoData.type };
+            promoDetails = { type: promoData.type };
         });
+
+        if (!promoDetails) {
+           throw new Error("Could not validate promo code. Please try again.");
+        }
 
         return promoDetails;
 
     } catch (error: any) {
         console.error("Promo code validation error: ", error.message);
-        throw error;
+        throw error; // Re-throw the error to be caught by the calling function
     }
 }
 
@@ -125,11 +129,6 @@ export function AuthForm() {
     setLoading(true);
     try {
       const promoDetails = await validateAndUsePromoCode(values.promoCode);
-
-      if (!promoDetails) {
-        // This case should ideally not be hit if validateAndUsePromoCode throws an error, but as a safeguard.
-        throw new Error("Invalid or expired promo code.");
-      }
       
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
@@ -160,7 +159,7 @@ export function AuthForm() {
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        description: error.message || "An error occurred.",
+        description: error.message || "An error occurred during sign-up.",
       });
     } finally {
       setLoading(false);

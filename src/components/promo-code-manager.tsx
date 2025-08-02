@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
