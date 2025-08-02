@@ -71,6 +71,7 @@ export function PromoCodeManager() {
         } as PromoCode));
         setPromoCodes(codesList);
       } catch (error) {
+        console.error("Error fetching promo codes: ", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch promo codes.' });
       } finally {
         setLoading(false);
@@ -101,7 +102,7 @@ export function PromoCodeManager() {
 
     try {
         const docRef = await addDoc(collection(db, "promoCodes"), newPromoData);
-        setPromoCodes([{ id: docRef.id, ...newPromoData }, ...promoCodes]);
+        setPromoCodes(prev => [{ id: docRef.id, ...newPromoData }, ...prev]);
         toast({ title: 'Success', description: 'Subscription code created.' });
         setDialogOpen(false);
         setNewCode({ code: "", type: "monthly", maxUses: "1" });
