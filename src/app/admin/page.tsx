@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, Loader2 } from "lucide-react";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,34 +17,40 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
 
-const ADMIN_PASSWORD = "abbas@gym";
+const ADMIN_EMAIL = "admin@gympro.app";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!password) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Password is required.",
+      });
+      return;
+    }
     setLoading(true);
-    setError("");
 
-    setTimeout(() => {
-      if (password === ADMIN_PASSWORD) {
-        toast({ title: "Access Granted", description: "Redirecting to admin panel..." });
-        router.push("/admin/promo-codes");
-      } else {
-        setError("Invalid password. Please try again.");
-        toast({
-          variant: "destructive",
-          title: "Access Denied",
-          description: "The password you entered is incorrect.",
-        });
-        setLoading(false);
-      }
-    }, 1000);
+    try {
+      await signInWithEmailAndPassword(auth, ADMIN_EMAIL, password);
+      toast({ title: "Access Granted", description: "Redirecting to admin panel..." });
+      router.push("/admin/promo-codes");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "The password you entered is incorrect.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,9 +78,6 @@ export default function AdminLoginPage() {
                 placeholder="••••••••"
               />
             </div>
-            {error && (
-              <p className="text-sm font-medium text-destructive">{error}</p>
-            )}
           </div>
         </CardContent>
         <CardFooter>
