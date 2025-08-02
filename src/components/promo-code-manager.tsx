@@ -60,8 +60,7 @@ export function PromoCodeManager() {
   const [newCode, setNewCode] = useState({ code: "", type: "monthly" as "monthly" | "yearly", maxUses: "1" });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPromoCodes = async () => {
+  const fetchPromoCodes = async () => {
       setLoading(true);
       try {
         const querySnapshot = await getDocs(collection(db, "promoCodes"));
@@ -72,13 +71,15 @@ export function PromoCodeManager() {
         setPromoCodes(codesList);
       } catch (error) {
         console.error("Error fetching promo codes: ", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch promo codes.' });
+        toast({ variant: 'destructive', title: 'Error fetching codes', description: (error as Error).message });
       } finally {
         setLoading(false);
       }
     };
+
+  useEffect(() => {
     fetchPromoCodes();
-  }, [toast]);
+  }, []);
 
   const generateRandomCode = () => {
     const typePrefix = newCode.type === "monthly" ? "MONTHLY" : "YEARLY";
@@ -87,8 +88,9 @@ export function PromoCodeManager() {
   };
   
   const handleAddCode = async () => {
-    if (!newCode.code || !newCode.type || !newCode.maxUses) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields.' });
+    const maxUsesNum = parseInt(newCode.maxUses, 10);
+    if (!newCode.code || !newCode.type || isNaN(maxUsesNum) || maxUsesNum < 1) {
+      toast({ variant: 'destructive', title: 'Invalid Input', description: 'Please fill all fields correctly. Max Uses must be a number greater than 0.' });
       return;
     }
 
@@ -97,18 +99,21 @@ export function PromoCodeManager() {
       type: newCode.type,
       status: 'active' as const,
       uses: 0,
-      maxUses: parseInt(newCode.maxUses, 10),
+      maxUses: maxUsesNum,
     };
 
     try {
         const docRef = await addDoc(collection(db, "promoCodes"), newPromoData);
-        setPromoCodes(prev => [{ id: docRef.id, ...newPromoData }, ...prev]);
+        // After successfully adding to DB, update the local state
+        const addedCode: PromoCode = { id: docRef.id, ...newPromoData };
+        setPromoCodes(prev => [addedCode, ...prev]);
+
         toast({ title: 'Success', description: 'Subscription code created.' });
         setDialogOpen(false);
         setNewCode({ code: "", type: "monthly", maxUses: "1" });
     } catch (e) {
         console.error("Error adding document: ", e);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not add promo code.' });
+        toast({ variant: 'destructive', title: 'Error', description: (e as Error).message || 'Could not add promo code.' });
     }
   };
   
@@ -151,7 +156,7 @@ export function PromoCodeManager() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="code" className="text-right">Code</Label>
-                  <Input id="code" value={newCode.code} onChange={e => setNewCode({...newCode, code: e.target.value})} className="col-span-2" />
+                  <Input id="code" value={newCode.code} onChange={e => setNewCode({...newCode, code: e.target.value.trim()})} className="col-span-2" />
                   <Button variant="outline" size="sm" onClick={generateRandomCode}>Random</Button>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -168,7 +173,7 @@ export function PromoCodeManager() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="maxUses" className="text-right">Max Uses</Label>
-                  <Input id="maxUses" type="number" value={newCode.maxUses} onChange={e => setNewCode({...newCode, maxUses: e.target.value})} className="col-span-3" />
+                  <Input id="maxUses" type="number" min="1" value={newCode.maxUses} onChange={e => setNewCode({...newCode, maxUses: e.target.value})} className="col-span-3" />
                 </div>
               </div>
               <DialogFooter>
