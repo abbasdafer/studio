@@ -10,7 +10,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where, runTransaction } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, runTransaction, DocumentSnapshot } from "firebase/firestore";
 
 
 import { Button } from "@/components/ui/button";
@@ -64,11 +64,21 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
+                // To avoid timing attacks, we give a generic error message.
                 return { success: false, error: "Invalid or expired promo code." };
             }
 
-            const promoDoc = querySnapshot.docs[0];
-            const promoData = promoDoc.data() as Omit<PromoCode, 'id'>;
+            const promoDoc = querySnapshot.docs[0] as DocumentSnapshot<Omit<PromoCode, 'id'>>;
+            
+            // Although we queried for the code, we must get it within the transaction
+            // to ensure atomicity.
+            const transactionalPromoDoc = await transaction.get(promoDoc.ref);
+
+            if (!transactionalPromoDoc.exists()) {
+                 return { success: false, error: "Invalid or expired promo code." };
+            }
+
+            const promoData = transactionalPromoDoc.data();
             
             if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
                  return { success: false, error: "This promo code has been fully used or is inactive." };
@@ -85,7 +95,10 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
         return result;
 
     } catch (error) {
-        console.error("Transaction failed: ", error);
+        console.error("Promo code transaction failed: ", error);
+        if (error instanceof Error) {
+            return { success: false, error: error.message };
+        }
         return { success: false, error: "Could not validate promo code. Please try again." };
     }
 };
