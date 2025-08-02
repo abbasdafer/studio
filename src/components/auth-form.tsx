@@ -51,23 +51,27 @@ const signUpSchema = z.object({
   promoCode: z.string().min(1, { message: "A valid subscription code is required." }),
 });
 
-const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' | 'yearly'}> => {
+type ValidationResult = 
+  | { success: true; type: 'monthly' | 'yearly' }
+  | { success: false; error: string };
+
+const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> => {
     const promoCodesRef = collection(db, "promoCodes");
     const q = query(promoCodesRef, where("code", "==", code));
 
     try {
-        const promoDetails = await runTransaction(db, async (transaction) => {
+        const result = await runTransaction(db, async (transaction) => {
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                throw new Error("Invalid or expired promo code.");
+                return { success: false, error: "Invalid or expired promo code." };
             }
 
             const promoDoc = querySnapshot.docs[0];
             const promoData = promoDoc.data() as Omit<PromoCode, 'id'>;
             
             if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
-                throw new Error("This promo code has been fully used or is inactive.");
+                 return { success: false, error: "This promo code has been fully used or is inactive." };
             }
 
             const newUses = promoData.uses + 1;
@@ -75,17 +79,14 @@ const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' |
             
             transaction.update(promoDoc.ref, { uses: newUses, status: newStatus });
             
-            return { type: promoData.type };
+            return { success: true, type: promoData.type };
         });
+        
+        return result;
 
-        if (!promoDetails) {
-           throw new Error("Could not validate promo code. Please try again.");
-        }
-
-        return promoDetails;
-
-    } catch (error: any) {
-        throw error;
+    } catch (error) {
+        console.error("Transaction failed: ", error);
+        return { success: false, error: "Could not validate promo code. Please try again." };
     }
 };
 
@@ -125,14 +126,18 @@ export function AuthForm() {
   const onSignUpSubmit = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
     try {
-      const promoDetails = await validateAndUsePromoCode(values.promoCode);
+      const validationResult = await validateAndUsePromoCode(values.promoCode);
+      
+      if (!validationResult.success) {
+        throw new Error(validationResult.error);
+      }
       
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
       const startDate = new Date();
       const endDate = new Date();
-      if (promoDetails.type === 'monthly') {
+      if (validationResult.type === 'monthly') {
           endDate.setMonth(startDate.getMonth() + 1);
       } else {
           endDate.setFullYear(startDate.getFullYear() + 1);
@@ -140,7 +145,7 @@ export function AuthForm() {
 
       await setDoc(doc(db, "gymOwners", user.uid), {
           email: user.email,
-          subscriptionType: promoDetails.type,
+          subscriptionType: validationResult.type,
           subscriptionStartDate: startDate,
           subscriptionEndDate: endDate,
           uid: user.uid
