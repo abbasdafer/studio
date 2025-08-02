@@ -41,7 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 
 export type PromoCode = {
@@ -79,7 +79,7 @@ export function PromoCodeManager() {
 
   useEffect(() => {
     fetchPromoCodes();
-  }, []);
+  }, [toast]);
 
   const generateRandomCode = () => {
     const typePrefix = newCode.type === "monthly" ? "MONTHLY" : "YEARLY";
@@ -104,7 +104,6 @@ export function PromoCodeManager() {
 
     try {
         const docRef = await addDoc(collection(db, "promoCodes"), newPromoData);
-        // After successfully adding to DB, update the local state
         const addedCode: PromoCode = { id: docRef.id, ...newPromoData };
         setPromoCodes(prev => [addedCode, ...prev]);
 
@@ -184,7 +183,7 @@ export function PromoCodeManager() {
           </Dialog>
         </div>
       </CardHeader>
-      <div className="border-t">
+      <CardContent>
         {loading ? (
            <div className="space-y-4 p-4">
              <Skeleton className="h-12 w-full" />
@@ -243,7 +242,7 @@ export function PromoCodeManager() {
           </TableBody>
         </Table>
          )}
-      </div>
+      </CardContent>
     </Card>
   );
 }
