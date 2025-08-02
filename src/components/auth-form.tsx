@@ -51,21 +51,19 @@ const signUpSchema = z.object({
   promoCode: z.string().min(1, { message: "A valid subscription code is required." }),
 });
 
-const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' | 'yearly'} | null> => {
+const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' | 'yearly'}> => {
     const promoCodesRef = collection(db, "promoCodes");
     const q = query(promoCodesRef, where("code", "==", code));
 
     try {
-        let promoDetails: { type: 'monthly' | 'yearly' } | null = null;
-        
-        await runTransaction(db, async (transaction) => {
-            const promoSnap = await transaction.get(q);
+        const promoDetails = await runTransaction(db, async (transaction) => {
+            const querySnapshot = await getDocs(q);
 
-            if (promoSnap.empty) {
+            if (querySnapshot.empty) {
                 throw new Error("Invalid or expired promo code.");
             }
 
-            const promoDoc = promoSnap.docs[0];
+            const promoDoc = querySnapshot.docs[0];
             const promoData = promoDoc.data() as Omit<PromoCode, 'id'>;
             
             if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
@@ -77,7 +75,7 @@ const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' |
             
             transaction.update(promoDoc.ref, { uses: newUses, status: newStatus });
             
-            promoDetails = { type: promoData.type };
+            return { type: promoData.type };
         });
 
         if (!promoDetails) {
@@ -87,10 +85,9 @@ const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' |
         return promoDetails;
 
     } catch (error: any) {
-        console.error("Promo code validation error: ", error.message);
-        throw error; // Re-throw the error to be caught by the calling function
+        throw error;
     }
-}
+};
 
 
 export function AuthForm() {
