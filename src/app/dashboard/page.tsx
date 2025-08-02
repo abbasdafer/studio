@@ -1,6 +1,6 @@
 import { UserNav } from "@/components/user-nav";
 import { SubscriptionCard } from "@/components/subscription-card";
-import { Dumbbell, Shield, Calendar, CalendarDays, CalendarMonth } from "lucide-react";
+import { Dumbbell, Shield, Calendar, CalendarDays, CalendarRange } from "lucide-react";
 
 const subscriptions = [
   {
@@ -21,7 +21,7 @@ const subscriptions = [
   },
   {
     title: "Monthly Pass",
-    icon: CalendarMonth,
+    icon: CalendarRange,
     plans: [
       { type: "Standard", price: 50, features: ["30-day access", "Basic equipment access", "Locker room"], icon: Shield, dataAiHint: "personal training" },
       { type: "Iron", price: 75, features: ["All Standard features", "Personal trainer consultation", "Smoothie bar discount"], icon: Dumbbell, dataAiHint: "bodybuilder" },
