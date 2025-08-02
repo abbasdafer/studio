@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -16,50 +17,54 @@ export function useAuth(required = true) {
   const [isSubscriptionActive, setSubscriptionActive] = useState(true); // Assume active until checked
 
   useEffect(() => {
-    const checkAuthAndSubscription = async (currentUser: User | null | undefined) => {
-      if (loading) return;
+    const checkAuthAndSubscription = async (currentUser: User) => {
+      try {
+        // Check subscription status
+        const ownerDocRef = doc(db, 'gymOwners', currentUser.uid);
+        const ownerDoc = await getDoc(ownerDocRef);
 
-      if (!currentUser) {
-        if (required) {
-          router.push('/');
-        }
-        return;
-      }
-      
-      // Check subscription status
-      const ownerDocRef = doc(db, 'gymOwners', currentUser.uid);
-      const ownerDoc = await getDoc(ownerDocRef);
-
-      if (ownerDoc.exists()) {
-        const data = ownerDoc.data();
-        const endDate = data.subscriptionEndDate.toDate();
-        if (new Date() > endDate) {
+        if (ownerDoc.exists()) {
+          const data = ownerDoc.data();
+          const endDate = data.subscriptionEndDate.toDate();
+          if (new Date() > endDate) {
+            setSubscriptionActive(false);
+            toast({
+              variant: 'destructive',
+              title: 'Subscription Expired',
+              description: 'Please renew your subscription to continue.',
+            });
+            // Log out the user and redirect
+            await auth.signOut();
+            router.push('/');
+          } else {
+            setSubscriptionActive(true);
+          }
+        } else if (required) {
+          // This case might happen if user exists in auth but not in gymOwners collection
           setSubscriptionActive(false);
           toast({
             variant: 'destructive',
-            title: 'Subscription Expired',
-            description: 'Please renew your subscription to continue.',
+            title: 'Account Error',
+            description: 'Could not find your subscription details.',
           });
-           // Log out the user and redirect
           await auth.signOut();
           router.push('/');
-        } else {
-          setSubscriptionActive(true);
         }
-      } else if (required) {
-        // This case might happen if user exists in auth but not in gymOwners collection
-        setSubscriptionActive(false);
-        toast({
-          variant: 'destructive',
-          title: 'Account Error',
-          description: 'Could not find your subscription details.',
-        });
-        await auth.signOut();
-        router.push('/');
+      } catch (e) {
+        console.error("Error checking subscription:", e);
+        // It's possible to be offline, so we might not want to log out immediately.
+        // For now, let's assume the subscription is active to avoid locking out users with bad connections.
+        setSubscriptionActive(true); 
       }
     };
 
-    checkAuthAndSubscription(user);
+    if (!loading) {
+        if (user) {
+            checkAuthAndSubscription(user);
+        } else if (required) {
+            router.push('/');
+        }
+    }
 
   }, [user, loading, required, router, toast]);
 
