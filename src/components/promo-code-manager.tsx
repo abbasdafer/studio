@@ -44,28 +44,28 @@ import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 type PromoCode = {
   id: string;
   code: string;
-  type: string;
+  type: "Monthly Subscription" | "Yearly Subscription";
   status: "Active" | "Used";
   uses: number;
   maxUses: number;
 };
 
 const initialPromoCodes: PromoCode[] = [
-  { id: '1', code: "WELCOME25", type: "Monthly Iron", status: "Active", uses: 5, maxUses: 100 },
-  { id: '2', code: "SUMMERFIT", type: "Weekly Standard", status: "Active", uses: 23, maxUses: 50 },
-  { id: '3', code: "EXPIREDCODE", type: "Daily Standard", status: "Used", uses: 10, maxUses: 10 },
-  { id: '4', code: "NEWYEARGYM", type: "Monthly Standard", status: "Active", uses: 88, maxUses: 200 },
+  { id: '1', code: "YEARLYACCESS", type: "Yearly Subscription", status: "Active", uses: 5, maxUses: 100 },
+  { id: '2', code: "MONTHLYTRIAL", type: "Monthly Subscription", status: "Active", uses: 23, maxUses: 50 },
+  { id: '3', code: "EXPIREDCODE", type: "Monthly Subscription", status: "Used", uses: 10, maxUses: 10 },
 ];
 
 export function PromoCodeManager() {
   const { toast } = useToast();
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>(initialPromoCodes);
   const [isDialogOpen, setDialogOpen] = useState(false);
-  const [newCode, setNewCode] = useState({ code: "", type: "Monthly Standard", maxUses: "100" });
+  const [newCode, setNewCode] = useState({ code: "", type: "Monthly Subscription" as const, maxUses: "1" });
 
   const generateRandomCode = () => {
+    const typePrefix = newCode.type.startsWith("Monthly") ? "MONTHLY" : "YEARLY";
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setNewCode(prev => ({...prev, code: `PROMO${randomPart}`}));
+    setNewCode(prev => ({...prev, code: `${typePrefix}${randomPart}`}));
   };
   
   const handleAddCode = () => {
@@ -84,14 +84,14 @@ export function PromoCodeManager() {
     };
 
     setPromoCodes([newPromo, ...promoCodes]);
-    toast({ title: 'Success', description: 'Promo code created.' });
+    toast({ title: 'Success', description: 'Subscription code created.' });
     setDialogOpen(false);
-    setNewCode({ code: "", type: "Monthly Standard", maxUses: "100" });
+    setNewCode({ code: "", type: "Monthly Subscription", maxUses: "1" });
   };
   
   const handleDeleteCode = (id: string) => {
     setPromoCodes(promoCodes.filter(c => c.id !== id));
-    toast({ title: 'Promo code deleted.' });
+    toast({ title: 'Subscription code deleted.' });
   };
 
   return (
@@ -99,9 +99,9 @@ export function PromoCodeManager() {
       <CardHeader>
         <div className="flex items-center justify-between">
             <div>
-                <CardTitle>Your Promo Codes</CardTitle>
+                <CardTitle>Subscription Codes</CardTitle>
                 <CardDescription>
-                View, create, and manage promo codes for your members.
+                Create and manage subscription codes for new gym managers.
                 </CardDescription>
             </div>
           <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
@@ -115,9 +115,9 @@ export function PromoCodeManager() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Promo Code</DialogTitle>
+                <DialogTitle>Create New Subscription Code</DialogTitle>
                 <DialogDescription>
-                  Generate a new code to share with your customers.
+                  Generate a new code to give to a new customer.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -128,17 +128,13 @@ export function PromoCodeManager() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="type" className="text-right">Type</Label>
-                  <Select value={newCode.type} onValueChange={v => setNewCode({...newCode, type: v})}>
+                  <Select value={newCode.type} onValueChange={v => setNewCode({...newCode, type: v as "Monthly Subscription" | "Yearly Subscription"})}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Daily Standard">Daily Standard</SelectItem>
-                      <SelectItem value="Daily Iron">Daily Iron</SelectItem>
-                      <SelectItem value="Weekly Standard">Weekly Standard</SelectItem>
-                      <SelectItem value="Weekly Iron">Weekly Iron</SelectItem>
-                      <SelectItem value="Monthly Standard">Monthly Standard</SelectItem>
-                      <SelectItem value="Monthly Iron">Monthly Iron</SelectItem>
+                      <SelectItem value="Monthly Subscription">Monthly Subscription</SelectItem>
+                      <SelectItem value="Yearly Subscription">Yearly Subscription</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

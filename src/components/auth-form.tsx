@@ -10,6 +10,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +37,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -45,8 +47,18 @@ const loginSchema = z.object({
 const signUpSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  promoCode: z.string().optional(),
+  promoCode: z.string().min(1, { message: "Promo code is required." }),
 });
+
+// This is a placeholder. In a real app, you'd fetch this from Firestore.
+const validatePromoCode = async (code: string): Promise<{type: 'monthly' | 'yearly'} | null> => {
+    // Dummy logic, replace with actual Firestore check against your promo codes collection
+    if (code.startsWith("MONTHLY")) return { type: 'monthly' };
+    if (code.startsWith("YEARLY")) return { type: 'yearly' };
+    // In a real scenario, you'd query the 'promoCodes' collection
+    return null;
+}
+
 
 export function AuthForm() {
   const router = useRouter();
@@ -70,10 +82,10 @@ export function AuthForm() {
       toast({ title: "Login Successful", description: "Welcome back!" });
       router.push("/dashboard");
     } catch (error: any) {
-      toast({
+       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "Invalid email or password.",
+        description: "Invalid email or password.",
       });
     } finally {
       setLoading(false);
@@ -82,15 +94,38 @@ export function AuthForm() {
 
   const onSignUpSubmit = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
-    // Note: The promo code logic will be handled by your admin backend.
-    // For now, we allow signup. You can enhance this later.
     try {
-      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const promoDetails = await validatePromoCode(values.promoCode);
+
+      if (!promoDetails) {
+        throw new Error("Invalid or expired promo code.");
+      }
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      const startDate = new Date();
+      const endDate = new Date();
+      if (promoDetails.type === 'monthly') {
+          endDate.setMonth(startDate.getMonth() + 1);
+      } else {
+          endDate.setFullYear(startDate.getFullYear() + 1);
+      }
+
+      await setDoc(doc(db, "gymOwners", user.uid), {
+          email: user.email,
+          subscriptionType: promoDetails.type,
+          subscriptionStartDate: startDate,
+          subscriptionEndDate: endDate,
+          uid: user.uid
+      });
+
       toast({
         title: "Sign Up Successful",
         description: "Your account has been created.",
       });
       router.push("/dashboard");
+
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -159,7 +194,7 @@ export function AuthForm() {
           <CardHeader>
             <CardTitle>Create Your Gym Account</CardTitle>
             <CardDescription>
-              Start managing your members in minutes.
+              An active subscription code is required to sign up.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,9 +231,9 @@ export function AuthForm() {
                   name="promoCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Promo Code (Optional)</FormLabel>
+                      <FormLabel>Subscription Code</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your code" {...field} value={field.value ?? ""} />
+                        <Input placeholder="Enter your code" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

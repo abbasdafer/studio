@@ -5,11 +5,20 @@ import { MemberManager } from "@/components/member-manager";
 import { Dumbbell } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isSubscriptionActive } = useAuth();
+  const router = useRouter();
 
-  if (loading || !user) {
+  useEffect(() => {
+    if (!loading && !isSubscriptionActive) {
+        router.push('/');
+    }
+  }, [loading, isSubscriptionActive, router]);
+  
+  if (loading || !user || !isSubscriptionActive) {
     return (
        <div className="flex min-h-screen flex-col bg-background">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-card px-4 sm:px-8">
@@ -21,7 +30,9 @@ export default function DashboardPage() {
         </header>
         <main className="flex-1 p-4 md:p-8">
           <div className="container mx-auto">
-             <Skeleton className="h-[400px] w-full" />
+             <div className="flex flex-col items-center justify-center h-64">
+                <p className="text-muted-foreground">Verifying subscription...</p>
+             </div>
           </div>
         </main>
       </div>
