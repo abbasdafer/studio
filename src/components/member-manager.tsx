@@ -42,7 +42,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
-type SubscriptionType = "Monthly" | "Annual";
+type SubscriptionType = 
+  | "Daily Iron" | "Daily Fitness"
+  | "Weekly Iron" | "Weekly Fitness"
+  | "Monthly Iron" | "Monthly Fitness";
 
 type Member = {
   id: string;
@@ -55,10 +58,14 @@ type Member = {
 
 const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
   const date = new Date(startDate);
-  if (type === "Monthly") {
+  const [duration, _] = type.split(" ");
+  
+  if (duration === "Daily") {
+    date.setDate(date.getDate() + 1);
+  } else if (duration === "Weekly") {
+    date.setDate(date.getDate() + 7);
+  } else if (duration === "Monthly") {
     date.setMonth(date.getMonth() + 1);
-  } else if (type === "Annual") {
-    date.setFullYear(date.getFullYear() + 1);
   }
   return date;
 };
@@ -67,25 +74,25 @@ const initialMembers: Member[] = [
   {
     id: "1",
     name: "Ahmad Ali",
-    subscriptionType: "Annual",
-    startDate: new Date("2024-01-15"),
-    endDate: new Date("2025-01-15"),
+    subscriptionType: "Monthly Iron",
+    startDate: new Date("2024-07-15"),
+    endDate: new Date("2024-08-15"),
     status: "Active",
   },
   {
     id: "2",
     name: "Fatima Zahra",
-    subscriptionType: "Monthly",
-    startDate: new Date("2024-06-05"),
-    endDate: new Date("2024-07-05"),
+    subscriptionType: "Weekly Fitness",
+    startDate: new Date("2024-07-20"),
+    endDate: new Date("2024-07-27"),
     status: "Active",
   },
    {
     id: "3",
     name: "Omar Khalid",
-    subscriptionType: "Monthly",
-    startDate: new Date("2024-04-20"),
-    endDate: new Date("2024-05-20"),
+    subscriptionType: "Daily Iron",
+    startDate: new Date("2024-05-20"),
+    endDate: new Date("2024-05-21"),
     status: "Expired",
   },
 ];
@@ -94,7 +101,7 @@ export function MemberManager() {
   const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [isDialogOpen, setDialogOpen] = useState(false);
-  const [newMember, setNewMember] = useState({ name: "", subscriptionType: "Monthly" as SubscriptionType });
+  const [newMember, setNewMember] = useState({ name: "", subscriptionType: "Monthly Iron" as SubscriptionType });
 
   const handleAddMember = () => {
     if (!newMember.name || !newMember.subscriptionType) {
@@ -117,7 +124,7 @@ export function MemberManager() {
     setMembers([newMemberData, ...members]);
     toast({ title: 'Success', description: 'New member added.' });
     setDialogOpen(false);
-    setNewMember({ name: "", subscriptionType: "Monthly" });
+    setNewMember({ name: "", subscriptionType: "Monthly Iron" });
   };
   
   const handleDeleteMember = (id: string) => {
@@ -161,8 +168,12 @@ export function MemberManager() {
                       <SelectValue placeholder="Select subscription type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Monthly">Monthly (30 IQD)</SelectItem>
-                      <SelectItem value="Annual">Annual (250 IQD)</SelectItem>
+                      <SelectItem value="Daily Iron">Daily - Iron</SelectItem>
+                      <SelectItem value="Daily Fitness">Daily - Fitness</SelectItem>
+                      <SelectItem value="Weekly Iron">Weekly - Iron</SelectItem>
+                      <SelectItem value="Weekly Fitness">Weekly - Fitness</SelectItem>
+                      <SelectItem value="Monthly Iron">Monthly - Iron</SelectItem>
+                      <SelectItem value="Monthly Fitness">Monthly - Fitness</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -193,7 +204,7 @@ export function MemberManager() {
             {members.map((member) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">{member.name}</TableCell>
-                <TableCell>{member.subscriptionType} - {member.subscriptionType === 'Monthly' ? '30 IQD' : '250 IQD'}</TableCell>
+                <TableCell>{member.subscriptionType.replace(' ', ' - ')}</TableCell>
                 <TableCell>{format(member.startDate, "PPP")}</TableCell>
                 <TableCell>{format(member.endDate, "PPP")}</TableCell>
                 <TableCell>
