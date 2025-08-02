@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,58 +42,83 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Skeleton } from "./ui/skeleton";
 
-type PromoCode = {
+export type PromoCode = {
   id: string;
   code: string;
-  type: "Monthly Subscription" | "Yearly Subscription";
-  status: "Active" | "Used";
+  type: "monthly" | "yearly";
+  status: "active" | "used";
   uses: number;
   maxUses: number;
 };
 
-const initialPromoCodes: PromoCode[] = [
-  { id: '1', code: "YEARLYACCESS", type: "Yearly Subscription", status: "Active", uses: 5, maxUses: 100 },
-  { id: '2', code: "MONTHLYTRIAL", type: "Monthly Subscription", status: "Active", uses: 23, maxUses: 50 },
-  { id: '3', code: "EXPIREDCODE", type: "Monthly Subscription", status: "Used", uses: 10, maxUses: 10 },
-];
-
 export function PromoCodeManager() {
   const { toast } = useToast();
-  const [promoCodes, setPromoCodes] = useState<PromoCode[]>(initialPromoCodes);
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isDialogOpen, setDialogOpen] = useState(false);
-  const [newCode, setNewCode] = useState({ code: "", type: "Monthly Subscription" as const, maxUses: "1" });
+  const [newCode, setNewCode] = useState({ code: "", type: "monthly" as "monthly" | "yearly", maxUses: "1" });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPromoCodes = async () => {
+      setLoading(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "promoCodes"));
+        const codesList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as PromoCode));
+        setPromoCodes(codesList);
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch promo codes.' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPromoCodes();
+  }, [toast]);
 
   const generateRandomCode = () => {
-    const typePrefix = newCode.type.startsWith("Monthly") ? "MONTHLY" : "YEARLY";
+    const typePrefix = newCode.type === "monthly" ? "MONTHLY" : "YEARLY";
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
     setNewCode(prev => ({...prev, code: `${typePrefix}${randomPart}`}));
   };
   
-  const handleAddCode = () => {
+  const handleAddCode = async () => {
     if (!newCode.code || !newCode.type || !newCode.maxUses) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields.' });
       return;
     }
 
-    const newPromo: PromoCode = {
-      id: (promoCodes.length + 1).toString(),
+    const newPromoData = {
       code: newCode.code,
       type: newCode.type,
-      status: 'Active',
+      status: 'active' as const,
       uses: 0,
       maxUses: parseInt(newCode.maxUses, 10),
     };
 
-    setPromoCodes([newPromo, ...promoCodes]);
-    toast({ title: 'Success', description: 'Subscription code created.' });
-    setDialogOpen(false);
-    setNewCode({ code: "", type: "Monthly Subscription", maxUses: "1" });
+    try {
+        const docRef = await addDoc(collection(db, "promoCodes"), newPromoData);
+        setPromoCodes([{ id: docRef.id, ...newPromoData }, ...promoCodes]);
+        toast({ title: 'Success', description: 'Subscription code created.' });
+        setDialogOpen(false);
+        setNewCode({ code: "", type: "monthly", maxUses: "1" });
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not add promo code.' });
+    }
   };
   
-  const handleDeleteCode = (id: string) => {
-    setPromoCodes(promoCodes.filter(c => c.id !== id));
-    toast({ title: 'Subscription code deleted.' });
+  const handleDeleteCode = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, "promoCodes", id));
+        setPromoCodes(promoCodes.filter(c => c.id !== id));
+        toast({ title: 'Subscription code deleted.' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete promo code.' });
+    }
   };
 
   return (
@@ -128,13 +155,13 @@ export function PromoCodeManager() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="type" className="text-right">Type</Label>
-                  <Select value={newCode.type} onValueChange={v => setNewCode({...newCode, type: v as "Monthly Subscription" | "Yearly Subscription"})}>
+                  <Select value={newCode.type} onValueChange={v => setNewCode({...newCode, type: v as "monthly" | "yearly"})}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Monthly Subscription">Monthly Subscription</SelectItem>
-                      <SelectItem value="Yearly Subscription">Yearly Subscription</SelectItem>
+                      <SelectItem value="monthly">Monthly Subscription</SelectItem>
+                      <SelectItem value="yearly">Yearly Subscription</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -144,6 +171,7 @@ export function PromoCodeManager() {
                 </div>
               </div>
               <DialogFooter>
+                <Button onClick={() => setDialogOpen(false)} variant="outline">Cancel</Button>
                 <Button onClick={handleAddCode}>Create Code</Button>
               </DialogFooter>
             </DialogContent>
@@ -151,6 +179,13 @@ export function PromoCodeManager() {
         </div>
       </CardHeader>
       <div className="border-t">
+        {loading ? (
+           <div className="space-y-4 p-4">
+             <Skeleton className="h-12 w-full" />
+             <Skeleton className="h-12 w-full" />
+             <Skeleton className="h-12 w-full" />
+           </div>
+         ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -164,35 +199,44 @@ export function PromoCodeManager() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {promoCodes.map((promo) => (
-              <TableRow key={promo.id}>
-                <TableCell className="font-medium">{promo.code}</TableCell>
-                <TableCell>{promo.type}</TableCell>
-                <TableCell>
-                  <Badge variant={promo.status === "Active" ? "default" : "secondary"} className={promo.status === 'Active' ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' : ''}>{promo.status}</Badge>
-                </TableCell>
-                <TableCell>{promo.uses} / {promo.maxUses}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => handleDeleteCode(promo.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+             {promoCodes.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                    No promo codes found. Create one to get started.
+                    </TableCell>
+                </TableRow>
+                ) : (
+                promoCodes.map((promo) => (
+                <TableRow key={promo.id}>
+                    <TableCell className="font-medium">{promo.code}</TableCell>
+                    <TableCell>{promo.type === 'monthly' ? 'Monthly' : 'Yearly'}</TableCell>
+                    <TableCell>
+                    <Badge variant={promo.status === "active" ? "default" : "secondary"} className={promo.status === 'active' ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' : ''}>{promo.status}</Badge>
+                    </TableCell>
+                    <TableCell>{promo.uses} / {promo.maxUses}</TableCell>
+                    <TableCell>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onSelect={() => handleDeleteCode(promo.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                        </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    </TableCell>
+                </TableRow>
+                ))
+            )}
           </TableBody>
         </Table>
+         )}
       </div>
     </Card>
   );

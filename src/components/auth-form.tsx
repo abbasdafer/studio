@@ -10,7 +10,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, updateDoc, runTransaction } from "firebase/firestore";
 
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
+import type { PromoCode } from "./promo-code-manager";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -47,16 +48,44 @@ const loginSchema = z.object({
 const signUpSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  promoCode: z.string().min(1, { message: "Promo code is required." }),
+  promoCode: z.string().min(1, { message: "A valid subscription code is required." }),
 });
 
-// This is a placeholder. In a real app, you'd fetch this from Firestore.
-const validatePromoCode = async (code: string): Promise<{type: 'monthly' | 'yearly'} | null> => {
-    // Dummy logic, replace with actual Firestore check against your promo codes collection
-    if (code.startsWith("MONTHLY")) return { type: 'monthly' };
-    if (code.startsWith("YEARLY")) return { type: 'yearly' };
-    // In a real scenario, you'd query the 'promoCodes' collection
-    return null;
+const validateAndUsePromoCode = async (code: string): Promise<{type: 'monthly' | 'yearly'} | null> => {
+    const promoCodesRef = collection(db, "promoCodes");
+    const q = query(promoCodesRef, where("code", "==", code));
+
+    try {
+        let promoDetails: { id: string, type: 'monthly' | 'yearly' } | null = null;
+        
+        await runTransaction(db, async (transaction) => {
+            const promoSnap = await getDocs(q);
+            if (promoSnap.empty) {
+                throw new Error("Invalid or expired promo code.");
+            }
+
+            const promoDoc = promoSnap.docs[0];
+            const promoData = promoDoc.data() as PromoCode;
+            
+            if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
+                throw new Error("Invalid or expired promo code.");
+            }
+
+            // Increment uses and update status if max uses is reached
+            const newUses = promoData.uses + 1;
+            const newStatus = newUses >= promoData.maxUses ? 'used' : 'active';
+            
+            transaction.update(promoDoc.ref, { uses: newUses, status: newStatus });
+            
+            promoDetails = { id: promoDoc.id, type: promoData.type };
+        });
+
+        return promoDetails;
+
+    } catch (error: any) {
+        console.error("Promo code validation error: ", error.message);
+        throw error;
+    }
 }
 
 
@@ -95,9 +124,10 @@ export function AuthForm() {
   const onSignUpSubmit = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
     try {
-      const promoDetails = await validatePromoCode(values.promoCode);
+      const promoDetails = await validateAndUsePromoCode(values.promoCode);
 
       if (!promoDetails) {
+        // This case should ideally not be hit if validateAndUsePromoCode throws an error, but as a safeguard.
         throw new Error("Invalid or expired promo code.");
       }
       
