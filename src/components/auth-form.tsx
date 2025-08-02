@@ -6,6 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +35,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -38,7 +43,6 @@ const loginSchema = z.object({
 });
 
 const signUpSchema = z.object({
-  name: z.string().min(1, { message: "Name is required." }),
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   promoCode: z.string().optional(),
@@ -56,52 +60,46 @@ export function AuthForm() {
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: "", email: "", password: "", promoCode: "" },
+    defaultValues: { email: "", password: "", promoCode: "" },
   });
 
-  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
+  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setLoading(true);
-    console.log("Login submitted", values);
-    setTimeout(() => {
-      // Mock API call
-      if (values.email === "user@example.com" && values.password === "password") {
-        toast({ title: "Login Successful", description: "Welcome back!" });
-        router.push("/dashboard");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Invalid email or password.",
-        });
-      }
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      toast({ title: "Login Successful", description: "Welcome back!" });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "Invalid email or password.",
+      });
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
-  const onSignUpSubmit = (values: z.infer<typeof signUpSchema>) => {
+  const onSignUpSubmit = async (values: z.infer<typeof signUpSchema>) => {
     setLoading(true);
-    console.log("Sign Up submitted", values);
-    setTimeout(() => {
-      // Mock API call
-      if (!values.promoCode || values.promoCode.toLowerCase() === "gympass24") {
-        toast({
-          title: "Sign Up Successful",
-          description: "Your account has been created.",
-        });
-        router.push("/dashboard");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Sign Up Failed",
-          description: "Invalid promo code.",
-        });
-         signUpForm.setError("promoCode", {
-          type: "manual",
-          message: "Invalid promo code. Please try again.",
-        });
-      }
+    // Note: The promo code logic will be handled by your admin backend.
+    // For now, we allow signup. You can enhance this later.
+    try {
+      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      toast({
+        title: "Sign Up Successful",
+        description: "Your account has been created.",
+      });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Sign Up Failed",
+        description: error.message || "An error occurred.",
+      });
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -113,9 +111,9 @@ export function AuthForm() {
       <TabsContent value="login">
         <Card>
           <CardHeader>
-            <CardTitle>Log In</CardTitle>
+            <CardTitle>Gym Manager Login</CardTitle>
             <CardDescription>
-              Enter your credentials to access your account.
+              Enter your credentials to access your dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -128,7 +126,7 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="your@email.com" {...field} />
+                        <Input placeholder="manager@gym.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -159,27 +157,14 @@ export function AuthForm() {
       <TabsContent value="signup">
         <Card>
           <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
+            <CardTitle>Create Your Gym Account</CardTitle>
             <CardDescription>
-              Create an account to start your fitness journey.
+              Start managing your members in minutes.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...signUpForm}>
               <form onSubmit={signUpForm.handleSubmit(onSignUpSubmit)} className="space-y-4">
-                 <FormField
-                  control={signUpForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={signUpForm.control}
                   name="email"
@@ -213,7 +198,7 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Promo Code (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your code" {...field} />
+                        <Input placeholder="Enter your code" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

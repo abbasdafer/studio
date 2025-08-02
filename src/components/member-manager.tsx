@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Users, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Skeleton } from "./ui/skeleton";
 
 type SubscriptionType = 
   | "Daily Iron" | "Daily Fitness"
@@ -54,6 +57,7 @@ type Member = {
   startDate: Date;
   endDate: Date;
   status: "Active" | "Expired";
+  gymOwnerId: string;
 };
 
 const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
@@ -70,40 +74,45 @@ const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
   return date;
 };
 
-const initialMembers: Member[] = [
-  {
-    id: "1",
-    name: "Ahmad Ali",
-    subscriptionType: "Monthly Iron",
-    startDate: new Date("2024-07-15"),
-    endDate: new Date("2024-08-15"),
-    status: "Active",
-  },
-  {
-    id: "2",
-    name: "Fatima Zahra",
-    subscriptionType: "Weekly Fitness",
-    startDate: new Date("2024-07-20"),
-    endDate: new Date("2024-07-27"),
-    status: "Active",
-  },
-   {
-    id: "3",
-    name: "Omar Khalid",
-    subscriptionType: "Daily Iron",
-    startDate: new Date("2024-05-20"),
-    endDate: new Date("2024-05-21"),
-    status: "Expired",
-  },
-];
-
-export function MemberManager() {
+export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const { toast } = useToast();
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+  const [members, setMembers] = useState<Member[]>([]);
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", subscriptionType: "Monthly Iron" as SubscriptionType });
+  const [loading, setLoading] = useState(true);
 
-  const handleAddMember = () => {
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!gymOwnerId) return;
+      try {
+        setLoading(true);
+        const q = query(collection(db, "members"), where("gymOwnerId", "==", gymOwnerId));
+        const querySnapshot = await getDocs(q);
+        const membersList = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name,
+                subscriptionType: data.subscriptionType,
+                startDate: data.startDate.toDate(),
+                endDate: data.endDate.toDate(),
+                status: data.status,
+                gymOwnerId: data.gymOwnerId
+            } as Member
+        });
+        setMembers(membersList);
+      } catch (error) {
+        console.error("Error fetching members: ", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch members.' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, [gymOwnerId, toast]);
+
+  const handleAddMember = async () => {
     if (!newMember.name || !newMember.subscriptionType) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields.' });
       return;
@@ -112,24 +121,35 @@ export function MemberManager() {
     const startDate = new Date();
     const endDate = calculateEndDate(startDate, newMember.subscriptionType);
 
-    const newMemberData: Member = {
-      id: (members.length + 1).toString(),
+    const newMemberData = {
       name: newMember.name,
       subscriptionType: newMember.subscriptionType,
       startDate,
       endDate,
-      status: 'Active',
+      status: 'Active' as 'Active' | 'Expired',
+      gymOwnerId,
     };
 
-    setMembers([newMemberData, ...members]);
-    toast({ title: 'Success', description: 'New member added.' });
-    setDialogOpen(false);
-    setNewMember({ name: "", subscriptionType: "Monthly Iron" });
+    try {
+        const docRef = await addDoc(collection(db, "members"), newMemberData);
+        setMembers([{ id: docRef.id, ...newMemberData }, ...members]);
+        toast({ title: 'Success', description: 'New member added.' });
+        setDialogOpen(false);
+        setNewMember({ name: "", subscriptionType: "Monthly Iron" });
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not add member.' });
+    }
   };
   
-  const handleDeleteMember = (id: string) => {
-    setMembers(members.filter(m => m.id !== id));
-    toast({ title: 'Member deleted.' });
+  const handleDeleteMember = async (id: string) => {
+    try {
+        await deleteDoc(doc(db, "members", id));
+        setMembers(members.filter(m => m.id !== id));
+        toast({ title: 'Member deleted.' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete member.' });
+    }
   };
 
   return (
@@ -187,6 +207,13 @@ export function MemberManager() {
         </div>
       </CardHeader>
       <CardContent>
+         {loading ? (
+           <div className="space-y-4">
+             <Skeleton className="h-12 w-full" />
+             <Skeleton className="h-12 w-full" />
+             <Skeleton className="h-12 w-full" />
+           </div>
+         ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -201,7 +228,14 @@ export function MemberManager() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((member) => (
+             {members.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  No members yet. Click "Add Member" to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+            members.map((member) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">{member.name}</TableCell>
                 <TableCell>{member.subscriptionType.replace(' ', ' - ')}</TableCell>
@@ -228,9 +262,11 @@ export function MemberManager() {
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            ))
+            )}
           </TableBody>
         </Table>
+         )}
       </CardContent>
     </Card>
   );
