@@ -41,7 +41,7 @@ const signUpSchema = z.object({
   name: z.string().min(1, { message: "Name is required." }),
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  promoCode: z.string().min(1, { message: "A valid promo code is required." }),
+  promoCode: z.string().optional(),
 });
 
 export function AuthForm() {
@@ -83,7 +83,7 @@ export function AuthForm() {
     console.log("Sign Up submitted", values);
     setTimeout(() => {
       // Mock API call
-      if (values.promoCode.toLowerCase() === "gympass24") {
+      if (!values.promoCode || values.promoCode.toLowerCase() === "gympass24") {
         toast({
           title: "Sign Up Successful",
           description: "Your account has been created.",
@@ -211,7 +211,7 @@ export function AuthForm() {
                   name="promoCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Promo Code</FormLabel>
+                      <FormLabel>Promo Code (Optional)</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter your code" {...field} />
                       </FormControl>
