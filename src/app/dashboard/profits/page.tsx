@@ -99,14 +99,15 @@ export default function ProfitsPage() {
       const typeKey = member.subscriptionType.split(' ')[1]; // "Fitness" or "Iron"
       revenueMap.set(typeKey, (revenueMap.get(typeKey) || 0) + price);
 
-      const monthYear = member.startDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+      const monthYear = member.startDate.toLocaleString('default', { month: 'short' });
       monthlyRevenueMap.set(monthYear, (monthlyRevenueMap.get(monthYear) || 0) + price);
     }
     
     const revenueByType: RevenueData[] = Array.from(revenueMap.entries()).map(([name, total]) => ({ name, total }));
 
     const sortedMonths = Array.from(monthlyRevenueMap.entries()).sort((a,b) => {
-        return new Date(a[0]).getTime() - new Date(b[0]).getTime();
+        const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return monthOrder.indexOf(a[0]) - monthOrder.indexOf(b[0]);
     });
     const monthlyRevenue: RevenueData[] = sortedMonths.map(([name, total]) => ({ name, total }));
 
@@ -115,17 +116,18 @@ export default function ProfitsPage() {
   
   if (loading) {
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
+             <div className="space-y-2">
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-5 w-1/2" />
+            </div>
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Skeleton className="h-32 w-full" />
                 <Skeleton className="h-32 w-full" />
                 <Skeleton className="h-32 w-full" />
                 <Skeleton className="h-32 w-full" />
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Skeleton className="h-80 w-full col-span-4" />
-                <Skeleton className="h-80 w-full col-span-3" />
-            </div>
+            <Skeleton className="h-96 w-full" />
         </div>
     )
   }
