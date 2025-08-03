@@ -12,10 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, LineChart, Settings } from "lucide-react";
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import Link from "next/link";
 
 export function UserNav() {
   const router = useRouter();
@@ -57,9 +58,19 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem asChild>
+             <Link href="/dashboard/profits">
+                <LineChart className="mr-2 h-4 w-4" />
+                <span>Profits</span>
+             </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled>
             <User className="mr-2 h-4 w-4" />
             <span>Profile</span>
+          </DropdownMenuItem>
+           <DropdownMenuItem disabled>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
