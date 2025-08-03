@@ -59,10 +59,17 @@ export default function ProfitsPage() {
 
         const membersList = membersSnapshot.docs.map(doc => {
             const data = doc.data();
-            // Robust date handling: Ensure startDate is a valid Firestore Timestamp before converting
-            const startDate = data.startDate instanceof Timestamp 
-                ? data.startDate.toDate() 
-                : new Date(data.startDate); // Fallback for other date representations
+            // Robust date handling: This is the critical fix.
+            // It ensures that we only proceed if startDate is a valid Firestore Timestamp.
+            // If it's missing or in a wrong format, it defaults to the current date
+            // to prevent the app from crashing.
+            let startDate: Date;
+            if (data.startDate && data.startDate instanceof Timestamp) {
+                startDate = data.startDate.toDate();
+            } else {
+                console.warn(`Invalid or missing startDate for member ${doc.id}. Defaulting to now.`);
+                startDate = new Date(); 
+            }
             
             return {
                 subscriptionType: data.subscriptionType,
@@ -74,7 +81,7 @@ export default function ProfitsPage() {
       } catch (error) {
         console.error("Error fetching profit data:", error);
         // Set to non-null values to stop loading and show an error message
-        setPricing({});
+        setPricing({} as Pricing); // Use empty object to avoid null errors
         setMembers([]);
       } finally {
         setLoading(false);
