@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -54,6 +54,7 @@ type SubscriptionType =
 type Member = {
   id: string;
   name: string;
+  phone?: string;
   subscriptionType: SubscriptionType;
   startDate: Date;
   endDate: Date;
@@ -80,7 +81,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [isRenewDialogOpen, setRenewDialogOpen] = useState(false);
-  const [newMember, setNewMember] = useState({ name: "", subscriptionType: "Monthly Iron" as SubscriptionType });
+  const [newMember, setNewMember] = useState({ name: "", phone: "", subscriptionType: "Monthly Iron" as SubscriptionType });
   const [renewalInfo, setRenewalInfo] = useState<{ member: Member | null; type: SubscriptionType }>({ member: null, type: 'Monthly Iron' });
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -96,10 +97,10 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
             const data = doc.data();
             const endDate = data.endDate.toDate();
             const status = new Date() > endDate ? 'Expired' : 'Active';
-            // We could update the status in the DB here, but for now just reflecting it in the UI is fine.
             return {
                 id: doc.id,
                 name: data.name,
+                phone: data.phone,
                 subscriptionType: data.subscriptionType,
                 startDate: data.startDate.toDate(),
                 endDate: endDate,
@@ -121,7 +122,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
 
   const handleAddMember = async () => {
     if (!newMember.name || !newMember.subscriptionType) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Member name and subscription type are required.' });
       return;
     }
     
@@ -130,6 +131,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
 
     const newMemberData = {
       name: newMember.name,
+      phone: newMember.phone || "",
       subscriptionType: newMember.subscriptionType,
       startDate,
       endDate,
@@ -143,7 +145,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         setMembers(prev => [addedMember, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
         toast({ title: 'Success', description: 'New member added.' });
         setAddDialogOpen(false);
-        setNewMember({ name: "", subscriptionType: "Monthly Iron" });
+        setNewMember({ name: "", phone: "", subscriptionType: "Monthly Iron" });
     } catch (e) {
         console.error("Error adding document: ", e);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not add member.' });
@@ -188,6 +190,16 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         console.error("Error renewing subscription: ", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Could not renew subscription.' });
     }
+  };
+
+  const handleSendWhatsAppReminder = (member: Member) => {
+    if (!member.phone) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No phone number for this member.' });
+      return;
+    }
+    const message = `Hello ${member.name}, this is a friendly reminder that your gym subscription has expired. We hope to see you soon!`;
+    const whatsappUrl = `https://wa.me/${member.phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const openRenewDialog = (member: Member) => {
@@ -237,24 +249,28 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">Name</Label>
-                        <Input id="name" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className="col-span-3" placeholder="Member's full name" />
+                          <Label htmlFor="name" className="text-right">Name</Label>
+                          <Input id="name" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className="col-span-3" placeholder="Member's full name" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="type" className="text-right">Subscription</Label>
-                        <Select value={newMember.subscriptionType} onValueChange={v => setNewMember({...newMember, subscriptionType: v as SubscriptionType})}>
-                            <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Select subscription type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                            <SelectItem value="Daily Iron">Daily - Iron</SelectItem>
-                            <SelectItem value="Daily Fitness">Daily - Fitness</SelectItem>
-                            <SelectItem value="Weekly Iron">Weekly - Iron</SelectItem>
-                            <SelectItem value="Weekly Fitness">Weekly - Fitness</SelectItem>
-                            <SelectItem value="Monthly Iron">Monthly - Iron</SelectItem>
-                            <SelectItem value="Monthly Fitness">Monthly - Fitness</SelectItem>
-                            </SelectContent>
-                        </Select>
+                          <Label htmlFor="phone" className="text-right">Phone</Label>
+                          <Input id="phone" value={newMember.phone} onChange={e => setNewMember({...newMember, phone: e.target.value})} className="col-span-3" placeholder="e.g. 9665xxxxxxxx (optional)" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="type" className="text-right">Subscription</Label>
+                          <Select value={newMember.subscriptionType} onValueChange={v => setNewMember({...newMember, subscriptionType: v as SubscriptionType})}>
+                              <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Select subscription type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                              <SelectItem value="Daily Iron">Daily - Iron</SelectItem>
+                              <SelectItem value="Daily Fitness">Daily - Fitness</SelectItem>
+                              <SelectItem value="Weekly Iron">Weekly - Iron</SelectItem>
+                              <SelectItem value="Weekly Fitness">Weekly - Fitness</SelectItem>
+                              <SelectItem value="Monthly Iron">Monthly - Iron</SelectItem>
+                              <SelectItem value="Monthly Fitness">Monthly - Fitness</SelectItem>
+                              </SelectContent>
+                          </Select>
                         </div>
                     </div>
                     <DialogFooter>
@@ -318,6 +334,12 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                            <RefreshCw className="mr-2 h-4 w-4" />
                            Renew Subscription
                         </DropdownMenuItem>
+                        {member.status === 'Expired' && member.phone && (
+                          <DropdownMenuItem onSelect={() => handleSendWhatsAppReminder(member)}>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Send Reminder
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => handleDeleteMember(member.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
