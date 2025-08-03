@@ -24,9 +24,10 @@ type Pricing = {
 
 // This function converts "Monthly Fitness" to "monthlyFitness"
 const formatSubscriptionTypeToKey = (type: string): string => {
-  const parts = type.split(' ');
-  if (parts.length < 2) return '';
-  return parts[0].toLowerCase() + parts.slice(1).join('');
+    if (!type) return '';
+    const parts = type.split(' ');
+    if (parts.length < 2) return type.toLowerCase();
+    return parts[0].toLowerCase() + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
 };
 
 export default function ProfitsPage() {
@@ -36,7 +37,11 @@ export default function ProfitsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) {
+        // If user is not available yet, don't do anything.
+        // The useAuth hook will handle redirection if necessary.
+        return;
+    }
 
     const fetchData = async () => {
       setLoading(true);
@@ -53,15 +58,19 @@ export default function ProfitsPage() {
         const membersSnapshot = await getDocs(membersQuery);
         const membersList = membersSnapshot.docs.map(doc => {
           const data = doc.data();
-          // Safe date handling
+          // The date can be a Timestamp object from Firestore or a string from previous operations
           let startDate = new Date(); // Default to now as a safe fallback
-          if (data.startDate && typeof data.startDate.toDate === 'function') {
-            startDate = data.startDate.toDate();
+          if (data.startDate) {
+              if (typeof data.startDate.toDate === 'function') { // It's a Firestore Timestamp
+                  startDate = data.startDate.toDate();
+              } else { // It might be a string or other format
+                  startDate = new Date(data.startDate);
+              }
           }
           return {
             id: doc.id,
-            subscriptionType: data.subscriptionType,
-            startDate: startDate,
+            subscriptionType: data.subscriptionType || '',
+            startDate: isNaN(startDate.getTime()) ? new Date() : startDate, // Final check for valid date
           };
         });
         setMembers(membersList);
@@ -75,7 +84,7 @@ export default function ProfitsPage() {
     fetchData();
   }, [user]);
 
-  const stats = useMemo(() => {
+  const chartData = useMemo(() => {
     if (!pricing || members.length === 0) {
       return {
         totalRevenue: 0,
@@ -96,7 +105,7 @@ export default function ProfitsPage() {
       totalRevenue += price;
 
       const monthIndex = member.startDate.getMonth();
-      if(monthlyRevenueData[monthIndex]){
+      if(monthlyRevenueData[monthIndex] !== undefined){
         monthlyRevenueData[monthIndex].revenue += price;
       }
     });
@@ -114,7 +123,7 @@ export default function ProfitsPage() {
   if (loading) {
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Skeleton className="h-32" />
                 <Skeleton className="h-32" />
                 <Skeleton className="h-32" />
@@ -133,7 +142,7 @@ export default function ProfitsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${chartData.totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Total from all members</p>
           </CardContent>
         </Card>
@@ -143,7 +152,7 @@ export default function ProfitsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMembers}</div>
+            <div className="text-2xl font-bold">{chartData.totalMembers}</div>
             <p className="text-xs text-muted-foreground">All active & expired members</p>
           </CardContent>
         </Card>
@@ -153,7 +162,7 @@ export default function ProfitsPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.averageRevenuePerMember.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${chartData.averageRevenuePerMember.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Average lifetime value</p>
           </CardContent>
         </Card>
@@ -166,7 +175,7 @@ export default function ProfitsPage() {
         <CardContent>
           <ChartContainer config={{ revenue: { label: "Revenue", color: "hsl(var(--primary))" } }} className="h-[300px] w-full">
             <ResponsiveContainer>
-              <BarChart data={stats.monthlyRevenue}>
+              <BarChart data={chartData.monthlyRevenue}>
                 <CartesianGrid vertical={false} />
                 <XAxis
                   dataKey="month"
