@@ -57,37 +57,34 @@ type ValidationResult =
 
 const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> => {
     const promoCodesRef = collection(db, "promoCodes");
-    const q = query(promoCodesRef, where("code", "==", code));
+    const q = query(promoCodesRef, where("code", "==", code.trim()));
 
     try {
         const result = await runTransaction(db, async (transaction) => {
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                // To avoid timing attacks, we give a generic error message.
                 return { success: false, error: "Invalid or expired promo code." };
             }
 
-            const promoDoc = querySnapshot.docs[0] as DocumentSnapshot<Omit<PromoCode, 'id'>>;
-            
             // Although we queried for the code, we must get it within the transaction
             // to ensure atomicity.
-            const transactionalPromoDoc = await transaction.get(promoDoc.ref);
+            const promoDocRef = querySnapshot.docs[0].ref;
+            const transactionalPromoDoc = await transaction.get(promoDocRef);
 
             if (!transactionalPromoDoc.exists()) {
                  return { success: false, error: "Invalid or expired promo code." };
             }
 
-            const promoData = transactionalPromoDoc.data();
+            const promoData = transactionalPromoDoc.data() as Omit<PromoCode, 'id'>;
             
             if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
                  return { success: false, error: "This promo code has been fully used or is inactive." };
             }
 
+            // The only operation is to increment the 'uses' count.
             const newUses = promoData.uses + 1;
-            const newStatus = newUses >= promoData.maxUses ? 'used' : 'active';
-            
-            transaction.update(promoDoc.ref, { uses: newUses, status: newStatus });
+            transaction.update(promoDocRef, { uses: newUses });
             
             return { success: true, type: promoData.type };
         });
@@ -96,10 +93,10 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
 
     } catch (error) {
         console.error("Promo code transaction failed: ", error);
-        if (error instanceof Error) {
-            return { success: false, error: error.message };
+        if (error instanceof Error && (error as any).code) {
+           return { success: false, error: `An unexpected error occurred: ${(error as any).code}` };
         }
-        return { success: false, error: "Could not validate promo code. Please try again." };
+        return { success: false, error: "Could not validate promo code. Please check server logs." };
     }
 };
 
@@ -142,6 +139,7 @@ export function AuthForm() {
       const validationResult = await validateAndUsePromoCode(values.promoCode);
       
       if (!validationResult.success) {
+        // We throw an error here to be caught by the catch block
         throw new Error(validationResult.error);
       }
       
@@ -174,6 +172,7 @@ export function AuthForm() {
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
+        // error.message will now contain the clear error from validationResult
         description: error.message || "An error occurred during sign-up.",
       });
     } finally {
