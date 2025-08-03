@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { DollarSign, Loader2 } from "lucide-react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -39,6 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import type { PromoCode } from "./promo-code-manager";
+import { Separator } from "./ui/separator";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -49,6 +50,14 @@ const signUpSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   promoCode: z.string().min(1, { message: "A valid subscription code is required." }),
+  pricing: z.object({
+      dailyFitness: z.coerce.number().min(0, "Price must be positive."),
+      weeklyFitness: z.coerce.number().min(0, "Price must be positive."),
+      monthlyFitness: z.coerce.number().min(0, "Price must be positive."),
+      dailyIron: z.coerce.number().min(0, "Price must be positive."),
+      weeklyIron: z.coerce.number().min(0, "Price must be positive."),
+      monthlyIron: z.coerce.number().min(0, "Price must be positive."),
+  })
 });
 
 type ValidationResult = 
@@ -67,8 +76,6 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
                 return { success: false, error: "Invalid or expired promo code." };
             }
 
-            // Although we queried for the code, we must get it within the transaction
-            // to ensure atomicity.
             const promoDocRef = querySnapshot.docs[0].ref;
             const transactionalPromoDoc = await transaction.get(promoDocRef);
 
@@ -81,8 +88,7 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
             if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
                  return { success: false, error: "This promo code has been fully used or is inactive." };
             }
-
-            // The only operation is to increment the 'uses' count.
+            
             const newUses = promoData.uses + 1;
             transaction.update(promoDocRef, { uses: newUses });
             
@@ -113,7 +119,19 @@ export function AuthForm() {
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: "", password: "", promoCode: "" },
+    defaultValues: { 
+        email: "", 
+        password: "", 
+        promoCode: "",
+        pricing: {
+            dailyFitness: 0,
+            weeklyFitness: 0,
+            monthlyFitness: 0,
+            dailyIron: 0,
+            weeklyIron: 0,
+            monthlyIron: 0
+        }
+    },
   });
 
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
@@ -139,7 +157,6 @@ export function AuthForm() {
       const validationResult = await validateAndUsePromoCode(values.promoCode);
       
       if (!validationResult.success) {
-        // We throw an error here to be caught by the catch block
         throw new Error(validationResult.error);
       }
       
@@ -159,7 +176,8 @@ export function AuthForm() {
           subscriptionType: validationResult.type,
           subscriptionStartDate: startDate,
           subscriptionEndDate: endDate,
-          uid: user.uid
+          uid: user.uid,
+          pricing: values.pricing, // Save the pricing structure
       });
 
       toast({
@@ -172,7 +190,6 @@ export function AuthForm() {
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        // error.message will now contain the clear error from validationResult
         description: error.message || "An error occurred during sign-up.",
       });
     } finally {
@@ -243,45 +260,165 @@ export function AuthForm() {
           <CardContent>
             <Form {...signUpForm}>
               <form onSubmit={signUpForm.handleSubmit(onSignUpSubmit)} className="space-y-4">
-                <FormField
-                  control={signUpForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="your@email.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signUpForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="Must be 8+ characters" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signUpForm.control}
-                  name="promoCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subscription Code</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your code" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-2">
+                    <FormField
+                    control={signUpForm.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                            <Input placeholder="your@email.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={signUpForm.control}
+                    name="password"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                            <Input type="password" placeholder="Must be 8+ characters" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={signUpForm.control}
+                    name="promoCode"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Subscription Code</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Enter your code" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                    <div className="space-y-1">
+                        <h3 className="text-lg font-medium">Subscription Pricing</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Set the prices for your member subscriptions.
+                        </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="space-y-4 p-4 border rounded-lg">
+                            <h4 className="font-medium text-center">Fitness Prices</h4>
+                            <FormField
+                                control={signUpForm.control}
+                                name="pricing.dailyFitness"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Daily</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={signUpForm.control}
+                                name="pricing.weeklyFitness"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Weekly</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={signUpForm.control}
+                                name="pricing.monthlyFitness"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Monthly</FormLabel>
+                                    <FormControl>
+                                       <div className="relative">
+                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                         </div>
+
+                         <div className="space-y-4 p-4 border rounded-lg">
+                            <h4 className="font-medium text-center">Iron Prices</h4>
+                            <FormField
+                                control={signUpForm.control}
+                                name="pricing.dailyIron"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Daily</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={signUpForm.control}
+                                name="pricing.weeklyIron"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Weekly</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={signUpForm.control}
+                                name="pricing.monthlyIron"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Monthly</FormLabel>
+                                    <FormControl>
+                                       <div className="relative">
+                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                         </div>
+                    </div>
+                </div>
+
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Create Account
@@ -294,3 +431,5 @@ export function AuthForm() {
     </Tabs>
   );
 }
+
+    
