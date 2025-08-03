@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { Dumbbell, LineChart, Users } from 'lucide-react';
 import { UserNav } from '@/components/user-nav';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardLayout({
   children,
@@ -17,15 +18,19 @@ export default function DashboardLayout({
   const { user, loading, isSubscriptionActive } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
+    if (!loading) {
+      if (!user) {
+        router.push('/');
+      } else if (!isSubscriptionActive) {
+        // useAuth hook already shows a toast and signs out.
+        // We just need to make sure we redirect.
+        router.push('/');
+      }
     }
-    if (!loading && !isSubscriptionActive) {
-      router.push('/');
-    }
-  }, [loading, user, isSubscriptionActive, router]);
+  }, [loading, user, isSubscriptionActive, router, toast]);
 
   if (loading || !user || !isSubscriptionActive) {
     return (
@@ -41,7 +46,7 @@ export default function DashboardLayout({
           <div className="container mx-auto">
             <div className="flex flex-col items-center justify-center h-64">
               <p className="text-muted-foreground">
-                Verifying subscription...
+                Verifying authentication and subscription...
               </p>
             </div>
           </div>

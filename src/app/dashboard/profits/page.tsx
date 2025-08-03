@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -49,7 +49,7 @@ export default function ProfitsPage() {
         // Fetch pricing
         const ownerDocRef = doc(db, 'gymOwners', user.uid);
         const ownerDoc = await getDoc(ownerDocRef);
-        if (ownerDoc.exists()) {
+        if (ownerDoc.exists() && ownerDoc.data().pricing) {
           setPricing(ownerDoc.data().pricing as Pricing);
         }
 
@@ -58,9 +58,14 @@ export default function ProfitsPage() {
         const membersSnapshot = await getDocs(membersQuery);
         const membersList = membersSnapshot.docs.map(doc => {
             const data = doc.data();
+            // Robust date handling: Ensure startDate is a valid Firestore Timestamp before converting
+            const startDate = data.startDate instanceof Timestamp 
+                ? data.startDate.toDate() 
+                : new Date(); // Fallback to now, though it shouldn't happen with correct data
+            
             return {
                 subscriptionType: data.subscriptionType,
-                startDate: data.startDate.toDate(),
+                startDate: startDate,
             } as Member;
         });
         setMembers(membersList);
@@ -75,8 +80,8 @@ export default function ProfitsPage() {
   }, [user]);
 
   const { totalRevenue, totalMembers, revenueByType, monthlyRevenue } = useMemo(() => {
-    if (!pricing || members.length === 0) {
-      return { totalRevenue: 0, totalMembers: members.length, revenueByType: [], monthlyRevenue: [] };
+    if (loading || !pricing || !members) {
+      return { totalRevenue: 0, totalMembers: 0, revenueByType: [], monthlyRevenue: [] };
     }
 
     const priceMap: Record<SubscriptionType, number> = {
@@ -88,13 +93,13 @@ export default function ProfitsPage() {
       "Monthly Iron": pricing.monthlyIron,
     };
     
-    let totalRevenue = 0;
+    let currentTotalRevenue = 0;
     const revenueMap = new Map<string, number>();
     const monthlyRevenueMap = new Map<string, number>();
 
     for (const member of members) {
       const price = priceMap[member.subscriptionType] || 0;
-      totalRevenue += price;
+      currentTotalRevenue += price;
       
       const typeKey = member.subscriptionType.split(' ')[1]; // "Fitness" or "Iron"
       revenueMap.set(typeKey, (revenueMap.get(typeKey) || 0) + price);
@@ -103,16 +108,21 @@ export default function ProfitsPage() {
       monthlyRevenueMap.set(monthYear, (monthlyRevenueMap.get(monthYear) || 0) + price);
     }
     
-    const revenueByType: RevenueData[] = Array.from(revenueMap.entries()).map(([name, total]) => ({ name, total }));
+    const revenueByTypeData: RevenueData[] = Array.from(revenueMap.entries()).map(([name, total]) => ({ name, total }));
 
+    const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const sortedMonths = Array.from(monthlyRevenueMap.entries()).sort((a,b) => {
-        const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         return monthOrder.indexOf(a[0]) - monthOrder.indexOf(b[0]);
     });
-    const monthlyRevenue: RevenueData[] = sortedMonths.map(([name, total]) => ({ name, total }));
+    const monthlyRevenueData: RevenueData[] = sortedMonths.map(([name, total]) => ({ name, total }));
 
-    return { totalRevenue, totalMembers: members.length, revenueByType, monthlyRevenue };
-  }, [pricing, members]);
+    return { 
+      totalRevenue: currentTotalRevenue, 
+      totalMembers: members.length, 
+      revenueByType: revenueByTypeData, 
+      monthlyRevenue: monthlyRevenueData 
+    };
+  }, [pricing, members, loading]);
   
   if (loading) {
     return (
@@ -208,8 +218,9 @@ export default function ProfitsPage() {
                      <Tooltip
                          cursor={{fill: 'hsl(var(--muted))'}}
                          content={<ChartTooltipContent
-                             formatter={(value) => `$${Number(value).toFixed(2)}`}
-                             labelKey='name'
+                             formatter={(value, name) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
+                             labelClassName="font-bold"
+                             labelFormatter={(label) => `Month: ${label}`}
                          />}
                      />
                      <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
