@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DollarSign, TrendingUp, Users, CalendarDays } from 'lucide-react';
+import { DollarSign, TrendingUp, Users } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartTooltipContent } from '@/components/ui/chart';
 
@@ -76,7 +76,7 @@ export default function ProfitsPage() {
 
   const { totalRevenue, totalMembers, revenueByType, monthlyRevenue } = useMemo(() => {
     if (!pricing || members.length === 0) {
-      return { totalRevenue: 0, totalMembers: 0, revenueByType: [], monthlyRevenue: [] };
+      return { totalRevenue: 0, totalMembers: members.length, revenueByType: [], monthlyRevenue: [] };
     }
 
     const priceMap: Record<SubscriptionType, number> = {
@@ -188,32 +188,38 @@ export default function ProfitsPage() {
             <CardDescription>An overview of revenue generated each month.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={monthlyRevenue}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="#888888"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `$${value}`}
-                />
-                <Tooltip
-                    cursor={{fill: 'hsl(var(--muted))'}}
-                    content={<ChartTooltipContent
-                        formatter={(value) => `$${Number(value).toFixed(2)}`}
-                        labelKey='name'
-                    />}
-                />
-                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+             {monthlyRevenue.length > 0 ? (
+                 <ResponsiveContainer width="100%" height={350}>
+                 <BarChart data={monthlyRevenue}>
+                     <XAxis
+                     dataKey="name"
+                     stroke="#888888"
+                     fontSize={12}
+                     tickLine={false}
+                     axisLine={false}
+                     />
+                     <YAxis
+                     stroke="#888888"
+                     fontSize={12}
+                     tickLine={false}
+                     axisLine={false}
+                     tickFormatter={(value) => `$${value}`}
+                     />
+                     <Tooltip
+                         cursor={{fill: 'hsl(var(--muted))'}}
+                         content={<ChartTooltipContent
+                             formatter={(value) => `$${Number(value).toFixed(2)}`}
+                             labelKey='name'
+                         />}
+                     />
+                     <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                 </BarChart>
+                 </ResponsiveContainer>
+             ) : (
+                <div className="flex items-center justify-center h-60">
+                    <p className="text-muted-foreground">No revenue data to display yet.</p>
+                </div>
+             )}
           </CardContent>
         </Card>
     </div>
