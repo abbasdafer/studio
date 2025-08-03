@@ -5,8 +5,7 @@ import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'fireb
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { DollarSign, TrendingUp, Users } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Loader2 } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartTooltipContent } from '@/components/ui/chart';
 
@@ -37,7 +36,7 @@ type RevenueData = {
 export default function ProfitsPage() {
   const { user } = useAuth();
   const [pricing, setPricing] = useState<Pricing | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<Member[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,22 +45,24 @@ export default function ProfitsPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch pricing
         const ownerDocRef = doc(db, 'gymOwners', user.uid);
-        const ownerDoc = await getDoc(ownerDocRef);
+        const membersQuery = query(collection(db, 'members'), where('gymOwnerId', '==', user.uid));
+        
+        const [ownerDoc, membersSnapshot] = await Promise.all([
+            getDoc(ownerDocRef),
+            getDocs(membersQuery)
+        ]);
+
         if (ownerDoc.exists() && ownerDoc.data().pricing) {
           setPricing(ownerDoc.data().pricing as Pricing);
         }
 
-        // Fetch members
-        const membersQuery = query(collection(db, 'members'), where('gymOwnerId', '==', user.uid));
-        const membersSnapshot = await getDocs(membersQuery);
         const membersList = membersSnapshot.docs.map(doc => {
             const data = doc.data();
             // Robust date handling: Ensure startDate is a valid Firestore Timestamp before converting
             const startDate = data.startDate instanceof Timestamp 
                 ? data.startDate.toDate() 
-                : new Date(); // Fallback to now, though it shouldn't happen with correct data
+                : new Date(data.startDate); // Fallback for other date representations
             
             return {
                 subscriptionType: data.subscriptionType,
@@ -69,8 +70,12 @@ export default function ProfitsPage() {
             } as Member;
         });
         setMembers(membersList);
+
       } catch (error) {
         console.error("Error fetching profit data:", error);
+        // Set to non-null values to stop loading and show an error message
+        setPricing({});
+        setMembers([]);
       } finally {
         setLoading(false);
       }
@@ -80,17 +85,18 @@ export default function ProfitsPage() {
   }, [user]);
 
   const { totalRevenue, totalMembers, revenueByType, monthlyRevenue } = useMemo(() => {
-    if (loading || !pricing || !members) {
+    // This calculation only runs when data is fully loaded and valid.
+    if (!pricing || !members) {
       return { totalRevenue: 0, totalMembers: 0, revenueByType: [], monthlyRevenue: [] };
     }
 
     const priceMap: Record<SubscriptionType, number> = {
-      "Daily Fitness": pricing.dailyFitness,
-      "Weekly Fitness": pricing.weeklyFitness,
-      "Monthly Fitness": pricing.monthlyFitness,
-      "Daily Iron": pricing.dailyIron,
-      "Weekly Iron": pricing.weeklyIron,
-      "Monthly Iron": pricing.monthlyIron,
+      "Daily Fitness": pricing.dailyFitness || 0,
+      "Weekly Fitness": pricing.weeklyFitness || 0,
+      "Monthly Fitness": pricing.monthlyFitness || 0,
+      "Daily Iron": pricing.dailyIron || 0,
+      "Weekly Iron": pricing.weeklyIron || 0,
+      "Monthly Iron": pricing.monthlyIron || 0,
     };
     
     let currentTotalRevenue = 0;
@@ -122,24 +128,30 @@ export default function ProfitsPage() {
       revenueByType: revenueByTypeData, 
       monthlyRevenue: monthlyRevenueData 
     };
-  }, [pricing, members, loading]);
+  }, [pricing, members]);
   
+  // This is the full-page loading state. It prevents any rendering until all data is ready.
   if (loading) {
     return (
-        <div className="space-y-6">
-             <div className="space-y-2">
-                <Skeleton className="h-8 w-1/3" />
-                <Skeleton className="h-5 w-1/2" />
+        <div className="flex h-64 w-full items-center justify-center rounded-lg border border-dashed">
+            <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Calculating profits...</span>
             </div>
-             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
-            </div>
-            <Skeleton className="h-96 w-full" />
         </div>
     )
+  }
+
+  // Fallback UI in case data fetching fails or there's no data.
+  if (!pricing || !members) {
+      return (
+           <div className="flex h-64 w-full items-center justify-center rounded-lg border border-dashed">
+                <div className="text-center text-muted-foreground">
+                    <p>Could not load profit data.</p>
+                    <p>Please ensure you have set your prices during sign-up.</p>
+                </div>
+            </div>
+      )
   }
 
   return (
@@ -218,7 +230,7 @@ export default function ProfitsPage() {
                      <Tooltip
                          cursor={{fill: 'hsl(var(--muted))'}}
                          content={<ChartTooltipContent
-                             formatter={(value, name) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
+                             formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
                              labelClassName="font-bold"
                              labelFormatter={(label) => `Month: ${label}`}
                          />}

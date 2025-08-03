@@ -5,10 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect } from 'react';
-import { Dumbbell, LineChart, Users } from 'lucide-react';
+import { Dumbbell, LineChart, Users, Loader2 } from 'lucide-react';
 import { UserNav } from '@/components/user-nav';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardLayout({
   children,
@@ -18,39 +17,26 @@ export default function DashboardLayout({
   const { user, loading, isSubscriptionActive } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push('/');
-      } else if (!isSubscriptionActive) {
-        // useAuth hook already shows a toast and signs out.
-        // We just need to make sure we redirect.
-        router.push('/');
-      }
+    if (!loading && (!user || !isSubscriptionActive)) {
+      router.push('/');
     }
-  }, [loading, user, isSubscriptionActive, router, toast]);
+  }, [loading, user, isSubscriptionActive, router]);
 
+  // This is a robust loading state that prevents any child components from rendering
+  // until we are certain the user is authenticated and has an active subscription.
   if (loading || !user || !isSubscriptionActive) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-card px-4 sm:px-8">
-          <div className="flex items-center gap-4">
-            <Dumbbell className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold tracking-tight">Gym Admin</h1>
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
+         <div className="flex items-center gap-2">
+            <Dumbbell className="h-6 w-6 text-primary animate-bounce" />
+            <h1 className="text-xl font-bold tracking-tight">GymPass Pro</h1>
           </div>
-          <Skeleton className="h-9 w-9 rounded-full" />
-        </header>
-        <main className="flex-1 p-4 md:p-8">
-          <div className="container mx-auto">
-            <div className="flex flex-col items-center justify-center h-64">
-              <p className="text-muted-foreground">
-                Verifying authentication and subscription...
-              </p>
-            </div>
-          </div>
-        </main>
+        <div className="mt-4 flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Verifying session...</span>
+        </div>
       </div>
     );
   }
