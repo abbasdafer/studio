@@ -1,257 +1,107 @@
+
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DollarSign, TrendingUp, Users, Loader2 } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { Loader2 } from 'lucide-react';
 
-type SubscriptionType = 
-  | "Daily Iron" | "Daily Fitness"
-  | "Weekly Iron" | "Weekly Fitness"
-  | "Monthly Iron" | "Monthly Fitness";
-
-type Member = {
-  subscriptionType: SubscriptionType;
-  startDate: Date;
-};
-
-type Pricing = {
-  dailyFitness: number;
-  weeklyFitness: number;
-  monthlyFitness: number;
-  dailyIron: number;
-  weeklyIron: number;
-  monthlyIron: number;
-};
-
-type RevenueData = {
-    name: string;
-    total: number;
-}
+// This is a temporary diagnostic component.
+// Its only purpose is to fetch data and display it raw, to see if the crash
+// happens during fetching or during processing.
 
 export default function ProfitsPage() {
   const { user } = useAuth();
-  const [pricing, setPricing] = useState<Pricing | null>(null);
-  const [members, setMembers] = useState<Member[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rawData, setRawData] = useState<any>(null);
 
   useEffect(() => {
     if (!user) return;
 
-    const fetchData = async () => {
+    const fetchDataForDiagnosis = async () => {
       setLoading(true);
+      setError(null);
+      console.log("Starting data fetch for diagnosis...");
+
       try {
         const ownerDocRef = doc(db, 'gymOwners', user.uid);
         const membersQuery = query(collection(db, 'members'), where('gymOwnerId', '==', user.uid));
         
-        const [ownerDoc, membersSnapshot] = await Promise.all([
-            getDoc(ownerDocRef),
-            getDocs(membersQuery)
-        ]);
+        console.log("Fetching gymOwner doc...");
+        const ownerDoc = await getDoc(ownerDocRef);
 
-        if (ownerDoc.exists() && ownerDoc.data().pricing) {
-          setPricing(ownerDoc.data().pricing as Pricing);
+        if (!ownerDoc.exists()) {
+            throw new Error("Gym owner document not found.");
         }
+        
+        console.log("Fetching members...");
+        const membersSnapshot = await getDocs(membersQuery);
 
-        const membersList = membersSnapshot.docs.map(doc => {
-            const data = doc.data();
-            // Robust date handling: This is the critical fix.
-            // It ensures that we only proceed if startDate is a valid Firestore Timestamp.
-            // If it's missing or in a wrong format, it defaults to the current date
-            // to prevent the app from crashing.
-            let startDate: Date;
-            if (data.startDate && data.startDate instanceof Timestamp) {
-                startDate = data.startDate.toDate();
-            } else {
-                console.warn(`Invalid or missing startDate for member ${doc.id}. Defaulting to now.`);
-                startDate = new Date(); 
-            }
-            
-            return {
-                subscriptionType: data.subscriptionType,
-                startDate: startDate,
-            } as Member;
+        const ownerData = ownerDoc.data();
+        const membersList = membersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        console.log("Data fetched successfully.");
+        setRawData({
+          ownerData,
+          membersList
         });
-        setMembers(membersList);
 
-      } catch (error) {
-        console.error("Error fetching profit data:", error);
-        // Set to non-null values to stop loading and show an error message
-        setPricing({} as Pricing); // Use empty object to avoid null errors
-        setMembers([]);
+      } catch (e: any) {
+        console.error("DIAGNOSTIC_ERROR:", e);
+        setError(`Failed to fetch data. Please check the browser console for details. Message: ${e.message}`);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchDataForDiagnosis();
   }, [user]);
 
-  const { totalRevenue, totalMembers, revenueByType, monthlyRevenue } = useMemo(() => {
-    // This calculation only runs when data is fully loaded and valid.
-    if (!pricing || !members) {
-      return { totalRevenue: 0, totalMembers: 0, revenueByType: [], monthlyRevenue: [] };
-    }
-
-    const priceMap: Record<SubscriptionType, number> = {
-      "Daily Fitness": pricing.dailyFitness || 0,
-      "Weekly Fitness": pricing.weeklyFitness || 0,
-      "Monthly Fitness": pricing.monthlyFitness || 0,
-      "Daily Iron": pricing.dailyIron || 0,
-      "Weekly Iron": pricing.weeklyIron || 0,
-      "Monthly Iron": pricing.monthlyIron || 0,
-    };
-    
-    let currentTotalRevenue = 0;
-    const revenueMap = new Map<string, number>();
-    const monthlyRevenueMap = new Map<string, number>();
-
-    for (const member of members) {
-      const price = priceMap[member.subscriptionType] || 0;
-      currentTotalRevenue += price;
-      
-      const typeKey = member.subscriptionType.split(' ')[1]; // "Fitness" or "Iron"
-      revenueMap.set(typeKey, (revenueMap.get(typeKey) || 0) + price);
-
-      const monthYear = member.startDate.toLocaleString('default', { month: 'short' });
-      monthlyRevenueMap.set(monthYear, (monthlyRevenueMap.get(monthYear) || 0) + price);
-    }
-    
-    const revenueByTypeData: RevenueData[] = Array.from(revenueMap.entries()).map(([name, total]) => ({ name, total }));
-
-    const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const sortedMonths = Array.from(monthlyRevenueMap.entries()).sort((a,b) => {
-        return monthOrder.indexOf(a[0]) - monthOrder.indexOf(b[0]);
-    });
-    const monthlyRevenueData: RevenueData[] = sortedMonths.map(([name, total]) => ({ name, total }));
-
-    return { 
-      totalRevenue: currentTotalRevenue, 
-      totalMembers: members.length, 
-      revenueByType: revenueByTypeData, 
-      monthlyRevenue: monthlyRevenueData 
-    };
-  }, [pricing, members]);
-  
-  // This is the full-page loading state. It prevents any rendering until all data is ready.
   if (loading) {
     return (
         <div className="flex h-64 w-full items-center justify-center rounded-lg border border-dashed">
             <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Calculating profits...</span>
+                <span>Running diagnostics... Fetching data...</span>
             </div>
         </div>
     )
   }
 
-  // Fallback UI in case data fetching fails or there's no data.
-  if (!pricing || !members) {
-      return (
-           <div className="flex h-64 w-full items-center justify-center rounded-lg border border-dashed">
-                <div className="text-center text-muted-foreground">
-                    <p>Could not load profit data.</p>
-                    <p>Please ensure you have set your prices during sign-up.</p>
-                </div>
+  if (error) {
+    return (
+        <div className="flex h-64 w-full items-center justify-center rounded-lg border border-dashed border-red-500 bg-red-50 p-4">
+            <div className="text-center text-red-700">
+                <h3 className="font-bold">An Error Occurred During Diagnostics</h3>
+                <p>{error}</p>
             </div>
-      )
+        </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-        <div>
-            <h2 className="text-2xl font-bold tracking-tight">Profit Dashboard</h2>
-            <p className="text-muted-foreground">
-                An overview of your gym's financial performance.
-            </p>
+        <h1 className="text-2xl font-bold">Diagnostic Mode</h1>
+        <p className="text-muted-foreground">
+            If you can see this page without a crash, it means the data was fetched successfully. 
+            The problem is in the data processing code (charts, calculations). 
+            Please copy the data below and send it to me.
+        </p>
+        
+        <div className="p-4 bg-muted rounded-lg">
+            <h2 className="font-bold mb-2">Raw Fetched Data:</h2>
+            <pre className="text-xs whitespace-pre-wrap break-all">
+                {JSON.stringify(rawData, (key, value) => {
+                    // Convert Firestore Timestamps to strings for readable JSON
+                    if (value && value.seconds !== undefined && value.nanoseconds !== undefined) {
+                        return new Timestamp(value.seconds, value.nanoseconds).toDate().toISOString();
+                    }
+                    return value;
+                }, 2)}
+            </pre>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
-                    <p className="text-xs text-muted-foreground">From all subscriptions</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{totalMembers}</div>
-                    <p className="text-xs text-muted-foreground">All-time member count</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Fitness Revenue</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">${(revenueByType.find(r => r.name === 'Fitness')?.total || 0).toFixed(2)}</div>
-                    <p className="text-xs text-muted-foreground">From Fitness packages</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Iron Revenue</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">${(revenueByType.find(r => r.name === 'Iron')?.total || 0).toFixed(2)}</div>
-                    <p className="text-xs text-muted-foreground">From Iron packages</p>
-                </CardContent>
-            </Card>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Revenue</CardTitle>
-            <CardDescription>An overview of revenue generated each month.</CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-             {monthlyRevenue.length > 0 ? (
-                 <ResponsiveContainer width="100%" height={350}>
-                 <BarChart data={monthlyRevenue}>
-                     <XAxis
-                     dataKey="name"
-                     stroke="#888888"
-                     fontSize={12}
-                     tickLine={false}
-                     axisLine={false}
-                     />
-                     <YAxis
-                     stroke="#888888"
-                     fontSize={12}
-                     tickLine={false}
-                     axisLine={false}
-                     tickFormatter={(value) => `$${value}`}
-                     />
-                     <Tooltip
-                         cursor={{fill: 'hsl(var(--muted))'}}
-                         content={<ChartTooltipContent
-                             formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
-                             labelClassName="font-bold"
-                             labelFormatter={(label) => `Month: ${label}`}
-                         />}
-                     />
-                     <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                 </BarChart>
-                 </ResponsiveContainer>
-             ) : (
-                <div className="flex items-center justify-center h-60">
-                    <p className="text-muted-foreground">No revenue data to display yet.</p>
-                </div>
-             )}
-          </CardContent>
-        </Card>
     </div>
   );
 }
