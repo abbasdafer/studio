@@ -2,80 +2,92 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, doc, getDoc, query, where, Timestamp } from 'firebase/firestore';
-import { BarChart, DollarSign, Users, TrendingUp, Loader2 } from 'lucide-react';
-import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+import { DollarSign, Users, TrendingUp, Loader2 } from 'lucide-react';
 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type Member = {
   id: string;
   subscriptionType: string;
-  startDate: Date;
 };
 
 type Pricing = {
   [key: string]: number;
 };
 
-// This function converts "Monthly Fitness" to "monthlyFitness"
+// This function safely converts "Monthly Fitness" to "monthlyFitness"
 const formatSubscriptionTypeToKey = (type: string): string => {
-    if (!type) return '';
+    if (!type || typeof type !== 'string') return '';
     const parts = type.split(' ');
-    if (parts.length < 2) return type.toLowerCase();
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].toLowerCase();
     return parts[0].toLowerCase() + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
 };
 
 export default function ProfitsPage() {
   const { user } = useAuth();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [pricing, setPricing] = useState<Pricing | null>(null);
+  const [stats, setStats] = useState<{
+    totalRevenue: number;
+    totalMembers: number;
+    averageRevenuePerMember: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.uid) {
-        // If user is not available yet, don't do anything.
-        // The useAuth hook will handle redirection if necessary.
+        // useAuth hook handles redirection, so we just wait.
         return;
     }
 
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
-        // Fetch pricing
+        // 1. Fetch pricing
         const ownerDocRef = doc(db, 'gymOwners', user.uid);
         const ownerDoc = await getDoc(ownerDocRef);
-        if (ownerDoc.exists()) {
-          setPricing(ownerDoc.data().pricing as Pricing);
+        if (!ownerDoc.exists()) {
+            throw new Error("Gym owner data not found.");
         }
+        const pricing = ownerDoc.data().pricing as Pricing || {};
 
-        // Fetch members
+        // 2. Fetch members
         const membersQuery = query(collection(db, 'members'), where('gymOwnerId', '==', user.uid));
         const membersSnapshot = await getDocs(membersQuery);
-        const membersList = membersSnapshot.docs.map(doc => {
-          const data = doc.data();
-          // The date can be a Timestamp object from Firestore or a string from previous operations
-          let startDate = new Date(); // Default to now as a safe fallback
-          if (data.startDate) {
-              if (typeof data.startDate.toDate === 'function') { // It's a Firestore Timestamp
-                  startDate = data.startDate.toDate();
-              } else { // It might be a string or other format
-                  startDate = new Date(data.startDate);
-              }
-          }
-          return {
-            id: doc.id,
-            subscriptionType: data.subscriptionType || '',
-            startDate: isNaN(startDate.getTime()) ? new Date() : startDate, // Final check for valid date
-          };
+        const membersList: Member[] = membersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                subscriptionType: data.subscriptionType || '',
+            };
         });
-        setMembers(membersList);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+
+        // 3. Calculate stats safely
+        const totalMembers = membersList.length;
+        let totalRevenue = 0;
+
+        membersList.forEach(member => {
+          const priceKey = formatSubscriptionTypeToKey(member.subscriptionType);
+          const price = pricing[priceKey] || 0;
+          totalRevenue += price;
+        });
+
+        const averageRevenuePerMember = totalMembers > 0 ? totalRevenue / totalMembers : 0;
+        
+        setStats({
+            totalRevenue,
+            totalMembers,
+            averageRevenuePerMember
+        });
+
+      } catch (e) {
+        console.error("Error fetching or processing data:", e);
+        setError(e instanceof Error ? e.message : "An unknown error occurred.");
       } finally {
         setLoading(false);
       }
@@ -83,54 +95,35 @@ export default function ProfitsPage() {
 
     fetchData();
   }, [user]);
-
-  const chartData = useMemo(() => {
-    if (!pricing || members.length === 0) {
-      return {
-        totalRevenue: 0,
-        totalMembers: 0,
-        averageRevenuePerMember: 0,
-        monthlyRevenue: Array(12).fill(0).map((_, i) => ({ month: new Date(0, i).toLocaleString('default', { month: 'short' }), revenue: 0 })),
-      };
-    }
-
-    const totalMembers = members.length;
-    let totalRevenue = 0;
-
-    const monthlyRevenueData = Array(12).fill(0).map((_, i) => ({ month: new Date(0, i).toLocaleString('default', { month: 'short' }), revenue: 0 }));
-
-    members.forEach(member => {
-      const priceKey = formatSubscriptionTypeToKey(member.subscriptionType);
-      const price = pricing[priceKey] || 0;
-      totalRevenue += price;
-
-      const monthIndex = member.startDate.getMonth();
-      if(monthlyRevenueData[monthIndex] !== undefined){
-        monthlyRevenueData[monthIndex].revenue += price;
-      }
-    });
-
-    const averageRevenuePerMember = totalMembers > 0 ? totalRevenue / totalMembers : 0;
-
-    return {
-      totalRevenue,
-      totalMembers,
-      averageRevenuePerMember,
-      monthlyRevenue: monthlyRevenueData,
-    };
-  }, [members, pricing]);
   
   if (loading) {
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
                 <Skeleton className="h-32" />
                 <Skeleton className="h-32" />
                 <Skeleton className="h-32" />
             </div>
-            <Skeleton className="h-80" />
         </div>
     );
+  }
+
+  if (error) {
+    return (
+        <div className="flex items-center justify-center h-64">
+            <Card className="w-full max-w-md p-6 text-center bg-destructive/10 border-destructive">
+                <CardTitle className="text-destructive">Error</CardTitle>
+                <CardContent className="pt-4">
+                    <p>Failed to load profit data.</p>
+                    <p className="text-xs text-muted-foreground mt-2">{error}</p>
+                </CardContent>
+            </Card>
+        </div>
+    )
+  }
+
+  if (!stats) {
+    return <div className="text-center">No stats to display.</div>
   }
 
   return (
@@ -142,7 +135,7 @@ export default function ProfitsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${chartData.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Total from all members</p>
           </CardContent>
         </Card>
@@ -152,7 +145,7 @@ export default function ProfitsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{chartData.totalMembers}</div>
+            <div className="text-2xl font-bold">{stats.totalMembers}</div>
             <p className="text-xs text-muted-foreground">All active & expired members</p>
           </CardContent>
         </Card>
@@ -162,43 +155,11 @@ export default function ProfitsPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${chartData.averageRevenuePerMember.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${stats.averageRevenuePerMember.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Average lifetime value</p>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Revenue Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={{ revenue: { label: "Revenue", color: "hsl(var(--primary))" } }} className="h-[300px] w-full">
-            <ResponsiveContainer>
-              <BarChart data={chartData.monthlyRevenue}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                />
-                <YAxis
-                  tickFormatter={(value) => `$${value}`}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                />
-                <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
-                />
-                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
     </div>
   );
 }
