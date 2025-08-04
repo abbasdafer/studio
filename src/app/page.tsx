@@ -68,16 +68,6 @@ export default function Home() {
                 الحل المتكامل لإدارة أعضاء ناديك الرياضي، والاشتراكات، والأرباح. ركز على رياضييك ودعنا نهتم بالباقي.
               </p>
             </div>
-            <div className="relative max-w-4xl mx-auto mt-12 rounded-xl shadow-2xl overflow-hidden bg-card p-2">
-                <Image 
-                    src="https://placehold.co/1200x600.png"
-                    width={1200}
-                    height={600}
-                    alt="صورة لوحة التحكم"
-                    data-ai-hint="dashboard gym"
-                    className="w-full rounded-lg"
-                />
-            </div>
           </div>
         </section>
 
