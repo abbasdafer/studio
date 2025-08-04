@@ -198,13 +198,13 @@ export function AuthForm() {
   };
 
   return (
-    <Tabs defaultValue="login" className="w-full max-w-md">
+    <Tabs defaultValue="login" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
         <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
       </TabsList>
       <TabsContent value="login">
-        <Card>
+        <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>تسجيل دخول مدير النادي</CardTitle>
             <CardDescription>
@@ -250,14 +250,14 @@ export function AuthForm() {
         </Card>
       </TabsContent>
       <TabsContent value="signup">
-        <Card>
+        <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>إنشاء حساب النادي الخاص بك</CardTitle>
             <CardDescription>
               مطلوب رمز اشتراك فعال للتسجيل.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-h-[60vh] overflow-y-auto">
             <Form {...signUpForm}>
               <form onSubmit={signUpForm.handleSubmit(onSignUpSubmit)} className="space-y-4">
                 <div className="space-y-2">
