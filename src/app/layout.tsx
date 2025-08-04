@@ -6,7 +6,7 @@ import { Tajawal } from 'next/font/google'
 const tajawal = Tajawal({ subsets: ['arabic'], weight: ['400', '700'], variable: '--font-tajawal' })
 
 export const metadata: Metadata = {
-  title: 'جيم باس برو',
+  title: 'جيمكو',
   description: 'إدارة اشتراكات النادي الرياضي بسهولة.',
 };
 

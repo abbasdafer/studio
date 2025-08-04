@@ -31,7 +31,7 @@ export default function DashboardLayout({
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
          <div className="flex items-center gap-2">
             <Dumbbell className="h-6 w-6 text-primary animate-bounce" />
-            <h1 className="text-xl font-bold tracking-tight">جيم باس برو</h1>
+            <h1 className="text-xl font-bold tracking-tight">جيمكو</h1>
           </div>
         <div className="mt-4 flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin ml-2" />
