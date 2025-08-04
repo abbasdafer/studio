@@ -8,7 +8,7 @@ export default function PromoCodesPage() {
         <div className="container mx-auto flex items-center gap-4">
           <TicketPercent className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-semibold tracking-tight">
-            Promo Code Management
+            إدارة أكواد التفعيل
           </h1>
         </div>
       </header>

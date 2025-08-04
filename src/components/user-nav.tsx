@@ -50,7 +50,7 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Gym Manager</p>
+            <p className="text-sm font-medium leading-none">مدير النادي</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -60,23 +60,23 @@ export function UserNav() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
              <Link href="/dashboard/profits">
-                <LineChart className="mr-2 h-4 w-4" />
-                <span>Profits</span>
+                <LineChart className="ml-2 h-4 w-4" />
+                <span>الأرباح</span>
              </Link>
           </DropdownMenuItem>
           <DropdownMenuItem disabled>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
+            <User className="ml-2 h-4 w-4" />
+            <span>الملف الشخصي</span>
           </DropdownMenuItem>
            <DropdownMenuItem disabled>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <Settings className="ml-2 h-4 w-4" />
+            <span>الإعدادات</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <LogOut className="ml-2 h-4 w-4" />
+          <span>تسجيل الخروج</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

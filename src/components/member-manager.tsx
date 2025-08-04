@@ -111,7 +111,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         setMembers(membersList);
       } catch (error) {
         console.error("Error fetching members: ", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch members.' });
+        toast({ variant: 'destructive', title: 'خطأ', description: 'فشل في جلب الأعضاء.' });
       } finally {
         setLoading(false);
       }
@@ -122,7 +122,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
 
   const handleAddMember = async () => {
     if (!newMember.name || !newMember.subscriptionType) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Member name and subscription type are required.' });
+      toast({ variant: 'destructive', title: 'خطأ', description: 'اسم العضو ونوع الاشتراك مطلوبان.' });
       return;
     }
     
@@ -143,12 +143,12 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         const docRef = await addDoc(collection(db, "members"), newMemberData);
         const addedMember = { id: docRef.id, ...newMemberData };
         setMembers(prev => [addedMember, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
-        toast({ title: 'Success', description: 'New member added.' });
+        toast({ title: 'نجاح', description: 'تمت إضافة عضو جديد.' });
         setAddDialogOpen(false);
         setNewMember({ name: "", phone: "", subscriptionType: "Monthly Iron" });
     } catch (e) {
         console.error("Error adding document: ", e);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not add member.' });
+        toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن إضافة العضو.' });
     }
   };
   
@@ -156,9 +156,9 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     try {
         await deleteDoc(doc(db, "members", id));
         setMembers(members.filter(m => m.id !== id));
-        toast({ title: 'Member deleted.' });
+        toast({ title: 'تم حذف العضو.' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete member.' });
+        toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن حذف العضو.' });
     }
   };
 
@@ -183,21 +183,21 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
             : m
         ).sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
 
-        toast({ title: 'Success', description: `Subscription for ${renewalInfo.member.name} has been renewed.` });
+        toast({ title: 'نجاح', description: `تم تجديد اشتراك ${renewalInfo.member.name}.` });
         setRenewDialogOpen(false);
         setRenewalInfo({ member: null, type: 'Monthly Iron' });
     } catch (error) {
         console.error("Error renewing subscription: ", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not renew subscription.' });
+        toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن تجديد الاشتراك.' });
     }
   };
 
   const handleSendWhatsAppReminder = (member: Member) => {
     if (!member.phone) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No phone number for this member.' });
+      toast({ variant: 'destructive', title: 'خطأ', description: 'لا يوجد رقم هاتف لهذا العضو.' });
       return;
     }
-    const message = `Hello ${member.name}, this is a friendly reminder that your gym subscription has expired. We hope to see you soon!`;
+    const message = `مرحباً ${member.name}، نود تذكيرك بأن اشتراكك في النادي قد انتهى. نتمنى رؤيتك قريباً!`;
     const whatsappUrl = `https://wa.me/${member.phone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -217,18 +217,18 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                  <CardTitle>Member Management</CardTitle>
+                  <CardTitle>إدارة الأعضاء</CardTitle>
                   <CardDescription>
-                  Add, view, search, and manage your gym members.
+                  إضافة وعرض وبحث وإدارة أعضاء النادي.
                   </CardDescription>
               </div>
             <div className="flex w-full sm:w-auto items-center gap-2">
                  <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
-                        placeholder="Search by name..."
-                        className="pl-8 w-full sm:w-[200px] lg:w-[250px]"
+                        placeholder="ابحث بالاسم..."
+                        className="pr-8 w-full sm:w-[200px] lg:w-[250px]"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -237,45 +237,45 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                     <DialogTrigger asChild>
                     <Button size="sm" className="gap-1">
                         <PlusCircle className="h-4 w-4" />
-                        <span className="hidden sm:inline">Add Member</span>
+                        <span className="hidden sm:inline">إضافة عضو</span>
                     </Button>
                     </DialogTrigger>
                     <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add New Member</DialogTitle>
+                        <DialogTitle>إضافة عضو جديد</DialogTitle>
                         <DialogDescription>
-                        Enter the details of the new member to add them.
+                        أدخل تفاصيل العضو الجديد لإضافته.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="name" className="text-right">Name</Label>
-                          <Input id="name" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className="col-span-3" placeholder="Member's full name" />
+                          <Label htmlFor="name" className="text-right">الاسم</Label>
+                          <Input id="name" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className="col-span-3" placeholder="الاسم الكامل للعضو" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="phone" className="text-right">Phone</Label>
-                          <Input id="phone" value={newMember.phone} onChange={e => setNewMember({...newMember, phone: e.target.value})} className="col-span-3" placeholder="e.g. 9665xxxxxxxx (optional)" />
+                          <Label htmlFor="phone" className="text-right">الهاتف</Label>
+                          <Input id="phone" value={newMember.phone} onChange={e => setNewMember({...newMember, phone: e.target.value})} className="col-span-3" placeholder="مثال: 9665xxxxxxxx (اختياري)" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="type" className="text-right">Subscription</Label>
+                          <Label htmlFor="type" className="text-right">الاشتراك</Label>
                           <Select value={newMember.subscriptionType} onValueChange={v => setNewMember({...newMember, subscriptionType: v as SubscriptionType})}>
                               <SelectTrigger className="col-span-3">
-                              <SelectValue placeholder="Select subscription type" />
+                              <SelectValue placeholder="اختر نوع الاشتراك" />
                               </SelectTrigger>
                               <SelectContent>
-                              <SelectItem value="Daily Iron">Daily - Iron</SelectItem>
-                              <SelectItem value="Daily Fitness">Daily - Fitness</SelectItem>
-                              <SelectItem value="Weekly Iron">Weekly - Iron</SelectItem>
-                              <SelectItem value="Weekly Fitness">Weekly - Fitness</SelectItem>
-                              <SelectItem value="Monthly Iron">Monthly - Iron</SelectItem>
-                              <SelectItem value="Monthly Fitness">Monthly - Fitness</SelectItem>
+                              <SelectItem value="Daily Iron">يومي - حديد</SelectItem>
+                              <SelectItem value="Daily Fitness">يومي - لياقة</SelectItem>
+                              <SelectItem value="Weekly Iron">أسبوعي - حديد</SelectItem>
+                              <SelectItem value="Weekly Fitness">أسبوعي - لياقة</SelectItem>
+                              <SelectItem value="Monthly Iron">شهري - حديد</SelectItem>
+                              <SelectItem value="Monthly Fitness">شهري - لياقة</SelectItem>
                               </SelectContent>
                           </Select>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={() => setAddDialogOpen(false)} variant="outline">Cancel</Button>
-                        <Button onClick={handleAddMember}>Add Member</Button>
+                        <Button onClick={() => setAddDialogOpen(false)} variant="outline">إلغاء</Button>
+                        <Button onClick={handleAddMember}>إضافة عضو</Button>
                     </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -293,13 +293,13 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead><User className="inline-block mr-2 h-4 w-4" />Name</TableHead>
-                <TableHead>Subscription</TableHead>
-                <TableHead><CalendarIcon className="inline-block mr-2 h-4 w-4" />Start Date</TableHead>
-                <TableHead><CalendarIcon className="inline-block mr-2 h-4 w-4" />End Date</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead><User className="inline-block ml-2 h-4 w-4" />الاسم</TableHead>
+                <TableHead>الاشتراك</TableHead>
+                <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ البدء</TableHead>
+                <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ الانتهاء</TableHead>
+                <TableHead>الحالة</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">الإجراءات</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -307,7 +307,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
               {filteredMembers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    {searchQuery ? 'No members match your search.' : 'No members yet. Click "Add Member" to get started.'}
+                    {searchQuery ? 'لا يوجد أعضاء يطابقون بحثك.' : 'لا يوجد أعضاء بعد. انقر على "إضافة عضو" للبدء.'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -318,32 +318,32 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                   <TableCell>{format(member.startDate, "PPP")}</TableCell>
                   <TableCell>{format(member.endDate, "PPP")}</TableCell>
                   <TableCell>
-                    <Badge variant={member.status === "Active" ? "default" : "destructive"} className={member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'}>{member.status}</Badge>
+                    <Badge variant={member.status === "Active" ? "default" : "destructive"} className={member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button aria-haspopup="true" size="icon" variant="ghost">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
+                          <span className="sr-only">تبديل القائمة</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                         <DropdownMenuItem onSelect={() => openRenewDialog(member)}>
-                           <RefreshCw className="mr-2 h-4 w-4" />
-                           Renew Subscription
+                           <RefreshCw className="ml-2 h-4 w-4" />
+                           تجديد الاشتراك
                         </DropdownMenuItem>
                         {member.status === 'Expired' && member.phone && (
                           <DropdownMenuItem onSelect={() => handleSendWhatsAppReminder(member)}>
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Send Reminder
+                            <MessageSquare className="ml-2 h-4 w-4" />
+                            إرسال تذكير
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => handleDeleteMember(member.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          <Trash2 className="ml-2 h-4 w-4" />
+                          حذف
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -361,32 +361,32 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
       <Dialog open={isRenewDialogOpen} onOpenChange={setRenewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Renew Subscription for {renewalInfo.member?.name}</DialogTitle>
+            <DialogTitle>تجديد اشتراك {renewalInfo.member?.name}</DialogTitle>
             <DialogDescription>
-              Select the new subscription type to renew the membership. The start date will be set to today.
+              اختر نوع الاشتراك الجديد لتجديد العضوية. سيتم تعيين تاريخ البدء إلى اليوم.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="renew-type" className="text-right">New Subscription</Label>
+              <Label htmlFor="renew-type" className="text-right">الاشتراك الجديد</Label>
               <Select value={renewalInfo.type} onValueChange={v => setRenewalInfo(prev => ({...prev, type: v as SubscriptionType}))}>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select subscription type" />
+                  <SelectValue placeholder="اختر نوع الاشتراك" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Daily Iron">Daily - Iron</SelectItem>
-                  <SelectItem value="Daily Fitness">Daily - Fitness</SelectItem>
-                  <SelectItem value="Weekly Iron">Weekly - Iron</SelectItem>
-                  <SelectItem value="Weekly Fitness">Weekly - Fitness</SelectItem>
-                  <SelectItem value="Monthly Iron">Monthly - Iron</SelectItem>
-                  <SelectItem value="Monthly Fitness">Monthly - Fitness</SelectItem>
+                  <SelectItem value="Daily Iron">يومي - حديد</SelectItem>
+                  <SelectItem value="Daily Fitness">يومي - لياقة</SelectItem>
+                  <SelectItem value="Weekly Iron">أسبوعي - حديد</SelectItem>
+                  <SelectItem value="Weekly Fitness">أسبوعي - لياقة</SelectItem>
+                  <SelectItem value="Monthly Iron">شهري - حديد</SelectItem>
+                  <SelectItem value="Monthly Fitness">شهري - لياقة</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setRenewDialogOpen(false)} variant="outline">Cancel</Button>
-            <Button onClick={handleRenewSubscription}>Renew</Button>
+            <Button onClick={() => setRenewDialogOpen(false)} variant="outline">إلغاء</Button>
+            <Button onClick={handleRenewSubscription}>تجديد</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -7,11 +7,11 @@ export default function Home() {
       <div className="flex items-center gap-4 mb-8">
         <Dumbbell className="h-12 w-12 text-primary" />
         <h1 className="text-4xl font-bold tracking-tighter text-foreground">
-          GymPass Pro
+          جيم باس برو
         </h1>
       </div>
        <p className="max-w-md text-center text-muted-foreground mb-8">
-        The all-in-one solution to manage your gym members, subscriptions, and growth.
+        الحل المتكامل لإدارة أعضاء ناديك الرياضي، والاشتراكات، والنمو.
       </p>
       <AuthForm />
     </main>

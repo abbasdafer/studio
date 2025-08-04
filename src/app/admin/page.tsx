@@ -31,8 +31,8 @@ export default function AdminLoginPage() {
     if (!password) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Password is required.",
+        title: "خطأ",
+        description: "كلمة المرور مطلوبة.",
       });
       return;
     }
@@ -40,13 +40,13 @@ export default function AdminLoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, ADMIN_EMAIL, password);
-      toast({ title: "Access Granted", description: "Redirecting to admin panel..." });
+      toast({ title: "تم منح الوصول", description: "جاري إعادة التوجيه إلى لوحة الإدارة..." });
       router.push("/admin/promo-codes");
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Access Denied",
-        description: "The password you entered is incorrect.",
+        title: "تم رفض الوصول",
+        description: "كلمة المرور التي أدخلتها غير صحيحة.",
       });
     } finally {
       setLoading(false);
@@ -60,15 +60,15 @@ export default function AdminLoginPage() {
             <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-4">
               <KeyRound className="h-8 w-8 text-primary" />
             </div>
-          <CardTitle>Admin Access</CardTitle>
+          <CardTitle>وصول المسؤول</CardTitle>
           <CardDescription>
-            Enter the admin password to manage promo codes.
+            أدخل كلمة مرور المسؤول لإدارة أكواد التفعيل.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">كلمة المرور</Label>
               <Input
                 id="password"
                 type="password"
@@ -82,8 +82,8 @@ export default function AdminLoginPage() {
         </CardContent>
         <CardFooter>
           <Button className="w-full" onClick={handleLogin} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Unlock
+            {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+            فتح
           </Button>
         </CardFooter>
       </Card>

@@ -71,7 +71,7 @@ export function PromoCodeManager() {
         setPromoCodes(codesList);
       } catch (error) {
         console.error("Error fetching promo codes: ", error);
-        toast({ variant: 'destructive', title: 'Error fetching codes', description: (error as Error).message });
+        toast({ variant: 'destructive', title: 'خطأ في جلب الرموز', description: (error as Error).message });
       } finally {
         setLoading(false);
       }
@@ -90,7 +90,7 @@ export function PromoCodeManager() {
   const handleAddCode = async () => {
     const maxUsesNum = parseInt(newCode.maxUses, 10);
     if (!newCode.code || !newCode.type || isNaN(maxUsesNum) || maxUsesNum < 1) {
-      toast({ variant: 'destructive', title: 'Invalid Input', description: 'Please fill all fields correctly. Max Uses must be a number greater than 0.' });
+      toast({ variant: 'destructive', title: 'إدخال غير صالح', description: 'يرجى ملء جميع الحقول بشكل صحيح. يجب أن يكون الحد الأقصى للاستخدامات رقمًا أكبر من 0.' });
       return;
     }
 
@@ -107,12 +107,12 @@ export function PromoCodeManager() {
         const addedCode: PromoCode = { id: docRef.id, ...newPromoData };
         setPromoCodes(prev => [addedCode, ...prev]);
 
-        toast({ title: 'Success', description: 'Subscription code created.' });
+        toast({ title: 'نجاح', description: 'تم إنشاء رمز الاشتراك.' });
         setDialogOpen(false);
         setNewCode({ code: "", type: "monthly", maxUses: "1" });
     } catch (e) {
         console.error("Error adding document: ", e);
-        toast({ variant: 'destructive', title: 'Error', description: (e as Error).message || 'Could not add promo code.' });
+        toast({ variant: 'destructive', title: 'خطأ', description: (e as Error).message || 'لا يمكن إضافة رمز التفعيل.' });
     }
   };
   
@@ -120,9 +120,9 @@ export function PromoCodeManager() {
     try {
         await deleteDoc(doc(db, "promoCodes", id));
         setPromoCodes(promoCodes.filter(c => c.id !== id));
-        toast({ title: 'Subscription code deleted.' });
+        toast({ title: 'تم حذف رمز الاشتراك.' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete promo code.' });
+        toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن حذف رمز الاشتراك.' });
     }
   };
 
@@ -131,9 +131,9 @@ export function PromoCodeManager() {
       <CardHeader>
         <div className="flex items-center justify-between">
             <div>
-                <CardTitle>Subscription Codes</CardTitle>
+                <CardTitle>أكواد الاشتراك</CardTitle>
                 <CardDescription>
-                Create and manage subscription codes for new gym managers.
+                إنشاء وإدارة أكواد الاشتراك لمديري الصالات الرياضية الجدد.
                 </CardDescription>
             </div>
           <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
@@ -141,43 +141,43 @@ export function PromoCodeManager() {
               <Button size="sm" className="gap-1">
                 <PlusCircle className="h-3.5 w-3.5" />
                 <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  Add Code
+                  إضافة كود
                 </span>
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Subscription Code</DialogTitle>
+                <DialogTitle>إنشاء رمز اشتراك جديد</DialogTitle>
                 <DialogDescription>
-                  Generate a new code to give to a new customer.
+                  قم بإنشاء رمز جديد لتقديمه لعميل جديد.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="code" className="text-right">Code</Label>
+                  <Label htmlFor="code" className="text-right">الكود</Label>
                   <Input id="code" value={newCode.code} onChange={e => setNewCode({...newCode, code: e.target.value.trim()})} className="col-span-2" />
-                  <Button variant="outline" size="sm" onClick={generateRandomCode}>Random</Button>
+                  <Button variant="outline" size="sm" onClick={generateRandomCode}>عشوائي</Button>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="type" className="text-right">Type</Label>
+                  <Label htmlFor="type" className="text-right">النوع</Label>
                   <Select value={newCode.type} onValueChange={v => setNewCode({...newCode, type: v as "monthly" | "yearly"})}>
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue placeholder="اختر النوع" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="monthly">Monthly Subscription</SelectItem>
-                      <SelectItem value="yearly">Yearly Subscription</SelectItem>
+                      <SelectItem value="monthly">اشتراك شهري</SelectItem>
+                      <SelectItem value="yearly">اشتراك سنوي</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="maxUses" className="text-right">Max Uses</Label>
+                  <Label htmlFor="maxUses" className="text-right">أقصى استخدام</Label>
                   <Input id="maxUses" type="number" min="1" value={newCode.maxUses} onChange={e => setNewCode({...newCode, maxUses: e.target.value})} className="col-span-3" />
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={() => setDialogOpen(false)} variant="outline">Cancel</Button>
-                <Button onClick={handleAddCode}>Create Code</Button>
+                <Button onClick={() => setDialogOpen(false)} variant="outline">إلغاء</Button>
+                <Button onClick={handleAddCode}>إنشاء كود</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -194,12 +194,12 @@ export function PromoCodeManager() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Usage</TableHead>
+              <TableHead>الكود</TableHead>
+              <TableHead>النوع</TableHead>
+              <TableHead>الحالة</TableHead>
+              <TableHead>الاستخدام</TableHead>
               <TableHead>
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">الإجراءات</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -207,16 +207,16 @@ export function PromoCodeManager() {
              {promoCodes.length === 0 ? (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                    No promo codes found. Create one to get started.
+                    لم يتم العثور على رموز ترويجية. قم بإنشاء واحد للبدء.
                     </TableCell>
                 </TableRow>
                 ) : (
                 promoCodes.map((promo) => (
                 <TableRow key={promo.id}>
                     <TableCell className="font-medium">{promo.code}</TableCell>
-                    <TableCell>{promo.type === 'monthly' ? 'Monthly' : 'Yearly'}</TableCell>
+                    <TableCell>{promo.type === 'monthly' ? 'شهري' : 'سنوي'}</TableCell>
                     <TableCell>
-                    <Badge variant={promo.status === "active" ? "default" : "secondary"} className={promo.status === 'active' ? 'bg-green-500/20 text-green-700 hover:bg-green-500/30' : ''}>{promo.status}</Badge>
+                    <Badge variant={promo.uses >= promo.maxUses ? "secondary" : "default"} className={promo.uses >= promo.maxUses ? '' : 'bg-green-500/20 text-green-700 hover:bg-green-500/30'}>{promo.uses >= promo.maxUses ? 'مستخدم' : 'نشط'}</Badge>
                     </TableCell>
                     <TableCell>{promo.uses} / {promo.maxUses}</TableCell>
                     <TableCell>
@@ -224,14 +224,14 @@ export function PromoCodeManager() {
                         <DropdownMenuTrigger asChild>
                         <Button aria-haspopup="true" size="icon" variant="ghost">
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
+                            <span className="sr-only">تبديل القائمة</span>
                         </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                         <DropdownMenuItem onSelect={() => handleDeleteCode(promo.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            <Trash2 className="ml-2 h-4 w-4" />
+                            حذف
                         </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

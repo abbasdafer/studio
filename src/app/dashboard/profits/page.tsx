@@ -1,9 +1,9 @@
-
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
-import { DollarSign, Users, TrendingUp, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { collection, getDocs, doc, getDoc, query, where, Timestamp } from 'firebase/firestore';
+import { DollarSign, Users, TrendingUp } from 'lucide-react';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -13,19 +13,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 type Member = {
   id: string;
   subscriptionType: string;
+  startDate: Date;
 };
 
 type Pricing = {
   [key: string]: number;
 };
 
-// This function safely converts "Monthly Fitness" to "monthlyFitness"
 const formatSubscriptionTypeToKey = (type: string): string => {
-    if (!type || typeof type !== 'string') return '';
-    const parts = type.split(' ');
-    if (parts.length === 0) return '';
-    if (parts.length === 1) return parts[0].toLowerCase();
-    return parts[0].toLowerCase() + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+  if (!type || typeof type !== 'string') return '';
+  const parts = type.split(' ');
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0].toLowerCase();
+  return parts[0].toLowerCase() + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
 };
 
 export default function ProfitsPage() {
@@ -34,60 +34,81 @@ export default function ProfitsPage() {
     totalRevenue: number;
     totalMembers: number;
     averageRevenuePerMember: number;
+    monthlyRevenue: { name: string; total: number }[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.uid) {
-        // useAuth hook handles redirection, so we just wait.
-        return;
+      return;
     }
 
     const fetchData = async () => {
       setLoading(true);
-      setError(null);
       try {
-        // 1. Fetch pricing
         const ownerDocRef = doc(db, 'gymOwners', user.uid);
         const ownerDoc = await getDoc(ownerDocRef);
         if (!ownerDoc.exists()) {
-            throw new Error("Gym owner data not found.");
+          throw new Error("لم يتم العثور على بيانات مالك الصالة الرياضية.");
         }
         const pricing = ownerDoc.data().pricing as Pricing || {};
 
-        // 2. Fetch members
         const membersQuery = query(collection(db, 'members'), where('gymOwnerId', '==', user.uid));
         const membersSnapshot = await getDocs(membersQuery);
-        const membersList: Member[] = membersSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                subscriptionType: data.subscriptionType || '',
-            };
-        });
+        const membersList: Member[] = membersSnapshot.docs
+            .map(docSnap => {
+                const data = docSnap.data();
+                if (!data.startDate) {
+                    return null;
+                }
+                const startDate = data.startDate instanceof Timestamp
+                    ? data.startDate.toDate()
+                    : new Date(data.startDate);
 
-        // 3. Calculate stats safely
+                return {
+                    id: docSnap.id,
+                    subscriptionType: data.subscriptionType || '',
+                    startDate: startDate,
+                };
+            })
+            .filter((member): member is Member => member !== null);
+
         const totalMembers = membersList.length;
         let totalRevenue = 0;
+        const monthlyRevenue: { [key: string]: number } = {};
 
         membersList.forEach(member => {
           const priceKey = formatSubscriptionTypeToKey(member.subscriptionType);
           const price = pricing[priceKey] || 0;
           totalRevenue += price;
+
+          if (member.startDate) {
+            const month = member.startDate.toLocaleString('ar-SA', { month: 'short', year: 'numeric' });
+            if (!monthlyRevenue[month]) {
+              monthlyRevenue[month] = 0;
+            }
+            monthlyRevenue[month] += price;
+          }
         });
 
         const averageRevenuePerMember = totalMembers > 0 ? totalRevenue / totalMembers : 0;
         
-        setStats({
-            totalRevenue,
-            totalMembers,
-            averageRevenuePerMember
-        });
+        const sortedMonthlyData = Object.entries(monthlyRevenue)
+          .map(([name, total]) => ({ name, total }))
+          .sort((a, b) => {
+              const dateA = new Date(`01 ${a.name.replace(' ', ' ')}`);
+              const dateB = new Date(`01 ${b.name.replace(' ', ' ')}`);
+              return dateA.getTime() - dateB.getTime();
+          });
 
+        setStats({
+          totalRevenue,
+          totalMembers,
+          averageRevenuePerMember,
+          monthlyRevenue: sortedMonthlyData,
+        });
       } catch (e) {
-        console.error("Error fetching or processing data:", e);
-        setError(e instanceof Error ? e.message : "An unknown error occurred.");
+        console.error("خطأ في جلب البيانات أو معالجتها:", e);
       } finally {
         setLoading(false);
       }
@@ -104,26 +125,13 @@ export default function ProfitsPage() {
                 <Skeleton className="h-32" />
                 <Skeleton className="h-32" />
             </div>
+            <Skeleton className="h-[300px]" />
         </div>
     );
   }
 
-  if (error) {
-    return (
-        <div className="flex items-center justify-center h-64">
-            <Card className="w-full max-w-md p-6 text-center bg-destructive/10 border-destructive">
-                <CardTitle className="text-destructive">Error</CardTitle>
-                <CardContent className="pt-4">
-                    <p>Failed to load profit data.</p>
-                    <p className="text-xs text-muted-foreground mt-2">{error}</p>
-                </CardContent>
-            </Card>
-        </div>
-    )
-  }
-
   if (!stats) {
-    return <div className="text-center">No stats to display.</div>
+    return <div className="text-center">لا توجد إحصائيات لعرضها.</div>
   }
 
   return (
@@ -131,35 +139,61 @@ export default function ProfitsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Total from all members</p>
+            <p className="text-xs text-muted-foreground">الإجمالي من جميع الأعضاء</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
+            <CardTitle className="text-sm font-medium">إجمالي الأعضاء</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalMembers}</div>
-            <p className="text-xs text-muted-foreground">All active & expired members</p>
+            <p className="text-xs text-muted-foreground">جميع الأعضاء النشطين والمنتهية عضويتهم</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Revenue / Member</CardTitle>
+            <CardTitle className="text-sm font-medium">متوسط الإيرادات / عضو</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.averageRevenuePerMember.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Average lifetime value</p>
+            <p className="text-xs text-muted-foreground">متوسط القيمة الدائمة</p>
           </CardContent>
         </Card>
       </div>
+       <Card>
+          <CardHeader>
+            <CardTitle>نظرة عامة على الإيرادات الشهرية</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={stats.monthlyRevenue}>
+                <XAxis
+                  dataKey="name"
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
     </div>
   );
 }

@@ -31,19 +31,19 @@ export default function DashboardLayout({
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
          <div className="flex items-center gap-2">
             <Dumbbell className="h-6 w-6 text-primary animate-bounce" />
-            <h1 className="text-xl font-bold tracking-tight">GymPass Pro</h1>
+            <h1 className="text-xl font-bold tracking-tight">جيم باس برو</h1>
           </div>
         <div className="mt-4 flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Verifying session...</span>
+            <Loader2 className="h-4 w-4 animate-spin ml-2" />
+            <span>جاري التحقق من الجلسة...</span>
         </div>
       </div>
     );
   }
   
   const navLinks = [
-      { href: '/dashboard', label: 'Members', icon: Users },
-      { href: '/dashboard/profits', label: 'Profits', icon: LineChart },
+      { href: '/dashboard', label: 'الأعضاء', icon: Users },
+      { href: '/dashboard/profits', label: 'الأرباح', icon: LineChart },
   ]
 
   return (
@@ -52,7 +52,7 @@ export default function DashboardLayout({
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <Dumbbell className="h-6 w-6 text-primary" />
-            <h1 className="hidden md:block text-xl font-bold tracking-tight">Gym Admin</h1>
+            <h1 className="hidden md:block text-xl font-bold tracking-tight">لوحة تحكم النادي</h1>
           </div>
           <nav className="flex items-center gap-4">
               {navLinks.map((link) => (
@@ -64,7 +64,7 @@ export default function DashboardLayout({
                         pathname === link.href ? "text-primary" : "text-muted-foreground"
                     )}
                   >
-                    <link.icon className="h-4 w-4" />
+                    <link.icon className="h-4 w-4 ml-1" />
                     {link.label}
                   </Link>
               ))}

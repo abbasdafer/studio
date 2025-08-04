@@ -42,21 +42,21 @@ import type { PromoCode } from "./promo-code-manager";
 import { Separator } from "./ui/separator";
 
 const loginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password is required." }),
+  email: z.string().email({ message: "عنوان بريد إلكتروني غير صالح." }),
+  password: z.string().min(1, { message: "كلمة المرور مطلوبة." }),
 });
 
 const signUpSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  promoCode: z.string().min(1, { message: "A valid subscription code is required." }),
+  email: z.string().email({ message: "عنوان بريد إلكتروني غير صالح." }),
+  password: z.string().min(8, { message: "يجب أن لا تقل كلمة المرور عن 8 أحرف." }),
+  promoCode: z.string().min(1, { message: "رمز اشتراك صالح مطلوب." }),
   pricing: z.object({
-      dailyFitness: z.coerce.number().min(0, "Price must be positive."),
-      weeklyFitness: z.coerce.number().min(0, "Price must be positive."),
-      monthlyFitness: z.coerce.number().min(0, "Price must be positive."),
-      dailyIron: z.coerce.number().min(0, "Price must be positive."),
-      weeklyIron: z.coerce.number().min(0, "Price must be positive."),
-      monthlyIron: z.coerce.number().min(0, "Price must be positive."),
+      dailyFitness: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
+      weeklyFitness: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
+      monthlyFitness: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
+      dailyIron: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
+      weeklyIron: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
+      monthlyIron: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
   })
 });
 
@@ -73,20 +73,20 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                return { success: false, error: "Invalid or expired promo code." };
+                return { success: false, error: "رمز التفعيل غير صالح أو منتهي الصلاحية." };
             }
 
             const promoDocRef = querySnapshot.docs[0].ref;
             const transactionalPromoDoc = await transaction.get(promoDocRef);
 
             if (!transactionalPromoDoc.exists()) {
-                 return { success: false, error: "Invalid or expired promo code." };
+                 return { success: false, error: "رمز التفعيل غير صالح أو منتهي الصلاحية." };
             }
 
             const promoData = transactionalPromoDoc.data() as Omit<PromoCode, 'id'>;
             
             if (promoData.status !== 'active' || promoData.uses >= promoData.maxUses) {
-                 return { success: false, error: "This promo code has been fully used or is inactive." };
+                 return { success: false, error: "هذا الرمز تم استخدامه بالكامل أو غير نشط." };
             }
             
             const newUses = promoData.uses + 1;
@@ -100,9 +100,9 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
     } catch (error) {
         console.error("Promo code transaction failed: ", error);
         if (error instanceof Error && (error as any).code) {
-           return { success: false, error: `An unexpected error occurred: ${(error as any).code}` };
+           return { success: false, error: `حدث خطأ غير متوقع: ${(error as any).code}` };
         }
-        return { success: false, error: "Could not validate promo code. Please check server logs." };
+        return { success: false, error: "لا يمكن التحقق من رمز التفعيل. يرجى مراجعة سجلات الخادم." };
     }
 };
 
@@ -138,13 +138,13 @@ export function AuthForm() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      toast({ title: "Login Successful", description: "Welcome back!" });
+      toast({ title: "تم تسجيل الدخول بنجاح", description: "مرحبًا بعودتك!" });
       router.push("/dashboard");
     } catch (error: any) {
        toast({
         variant: "destructive",
-        title: "Login Failed",
-        description: "Invalid email or password.",
+        title: "فشل تسجيل الدخول",
+        description: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
       });
     } finally {
       setLoading(false);
@@ -181,16 +181,16 @@ export function AuthForm() {
       });
 
       toast({
-        title: "Sign Up Successful",
-        description: "Your account has been created.",
+        title: "تم التسجيل بنجاح",
+        description: "تم إنشاء حسابك بنجاح.",
       });
       router.push("/dashboard");
 
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Sign Up Failed",
-        description: error.message || "An error occurred during sign-up.",
+        title: "فشل التسجيل",
+        description: error.message || "حدث خطأ أثناء التسجيل.",
       });
     } finally {
       setLoading(false);
@@ -200,15 +200,15 @@ export function AuthForm() {
   return (
     <Tabs defaultValue="login" className="w-full max-w-md">
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="login">Log In</TabsTrigger>
-        <TabsTrigger value="signup">Sign Up</TabsTrigger>
+        <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
+        <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
       </TabsList>
       <TabsContent value="login">
         <Card>
           <CardHeader>
-            <CardTitle>Gym Manager Login</CardTitle>
+            <CardTitle>تسجيل دخول مدير النادي</CardTitle>
             <CardDescription>
-              Enter your credentials to access your dashboard.
+              أدخل بياناتك للوصول إلى لوحة التحكم الخاصة بك.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -219,7 +219,7 @@ export function AuthForm() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>البريد الإلكتروني</FormLabel>
                       <FormControl>
                         <Input placeholder="manager@gym.com" {...field} />
                       </FormControl>
@@ -232,7 +232,7 @@ export function AuthForm() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>كلمة المرور</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
@@ -241,8 +241,8 @@ export function AuthForm() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Log In
+                  {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                  تسجيل الدخول
                 </Button>
               </form>
             </Form>
@@ -252,9 +252,9 @@ export function AuthForm() {
       <TabsContent value="signup">
         <Card>
           <CardHeader>
-            <CardTitle>Create Your Gym Account</CardTitle>
+            <CardTitle>إنشاء حساب النادي الخاص بك</CardTitle>
             <CardDescription>
-              An active subscription code is required to sign up.
+              مطلوب رمز اشتراك فعال للتسجيل.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -266,7 +266,7 @@ export function AuthForm() {
                     name="email"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>البريد الإلكتروني</FormLabel>
                         <FormControl>
                             <Input placeholder="your@email.com" {...field} />
                         </FormControl>
@@ -279,9 +279,9 @@ export function AuthForm() {
                     name="password"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel>كلمة المرور</FormLabel>
                         <FormControl>
-                            <Input type="password" placeholder="Must be 8+ characters" {...field} />
+                            <Input type="password" placeholder="يجب أن لا تقل عن 8 أحرف" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -292,9 +292,9 @@ export function AuthForm() {
                     name="promoCode"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Subscription Code</FormLabel>
+                        <FormLabel>رمز الاشتراك</FormLabel>
                         <FormControl>
-                            <Input placeholder="Enter your code" {...field} />
+                            <Input placeholder="أدخل الرمز الخاص بك" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -306,25 +306,25 @@ export function AuthForm() {
                 
                 <div className="space-y-4">
                     <div className="space-y-1">
-                        <h3 className="text-lg font-medium">Subscription Pricing</h3>
+                        <h3 className="text-lg font-medium">أسعار الاشتراكات</h3>
                         <p className="text-sm text-muted-foreground">
-                            Set the prices for your member subscriptions.
+                            حدد أسعار اشتراكات أعضائك.
                         </p>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="space-y-4 p-4 border rounded-lg">
-                            <h4 className="font-medium text-center">Fitness Prices</h4>
+                            <h4 className="font-medium text-center">أسعار اللياقة</h4>
                             <FormField
                                 control={signUpForm.control}
                                 name="pricing.dailyFitness"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Daily</FormLabel>
+                                    <FormLabel>يومي</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                            <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pr-8" {...field} />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -336,11 +336,11 @@ export function AuthForm() {
                                 name="pricing.weeklyFitness"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Weekly</FormLabel>
+                                    <FormLabel>أسبوعي</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                            <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pr-8" {...field} />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -352,11 +352,11 @@ export function AuthForm() {
                                 name="pricing.monthlyFitness"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Monthly</FormLabel>
+                                    <FormLabel>شهري</FormLabel>
                                     <FormControl>
                                        <div className="relative">
-                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                            <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pr-8" {...field} />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -366,17 +366,17 @@ export function AuthForm() {
                          </div>
 
                          <div className="space-y-4 p-4 border rounded-lg">
-                            <h4 className="font-medium text-center">Iron Prices</h4>
+                            <h4 className="font-medium text-center">أسعار الحديد</h4>
                             <FormField
                                 control={signUpForm.control}
                                 name="pricing.dailyIron"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Daily</FormLabel>
+                                    <FormLabel>يومي</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                            <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pr-8" {...field} />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -388,11 +388,11 @@ export function AuthForm() {
                                 name="pricing.weeklyIron"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Weekly</FormLabel>
+                                    <FormLabel>أسبوعي</FormLabel>
                                     <FormControl>
                                         <div className="relative">
-                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                            <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pr-8" {...field} />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -404,11 +404,11 @@ export function AuthForm() {
                                 name="pricing.monthlyIron"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Monthly</FormLabel>
+                                    <FormLabel>شهري</FormLabel>
                                     <FormControl>
                                        <div className="relative">
-                                            <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input type="number" placeholder="0.00" className="pl-8" {...field} />
+                                            <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input type="number" placeholder="0.00" className="pr-8" {...field} />
                                         </div>
                                     </FormControl>
                                     <FormMessage />
@@ -420,8 +420,8 @@ export function AuthForm() {
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Account
+                  {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                  إنشاء حساب
                 </Button>
               </form>
             </Form>
@@ -431,5 +431,3 @@ export function AuthForm() {
     </Tabs>
   );
 }
-
-    

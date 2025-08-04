@@ -1,13 +1,13 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import { Inter } from 'next/font/google'
+import { Tajawal } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const tajawal = Tajawal({ subsets: ['arabic'], weight: ['400', '700'], variable: '--font-tajawal' })
 
 export const metadata: Metadata = {
-  title: 'GymPass Pro',
-  description: 'Manage your gym subscriptions with ease.',
+  title: 'جيم باس برو',
+  description: 'إدارة اشتراكات النادي الرياضي بسهولة.',
 };
 
 export default function RootLayout({
@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-       <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
+       <body className={`${tajawal.variable} font-sans antialiased`}>
         {children}
         <Toaster />
       </body>
