@@ -77,6 +77,18 @@ const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
   return date;
 };
 
+const translateSubscriptionType = (type: SubscriptionType): string => {
+  const translations: Record<SubscriptionType, string> = {
+    "Daily Iron": "يومي - حديد",
+    "Daily Fitness": "يومي - لياقة",
+    "Weekly Iron": "أسبوعي - حديد",
+    "Weekly Fitness": "أسبوعي - لياقة",
+    "Monthly Iron": "شهري - حديد",
+    "Monthly Fitness": "شهري - لياقة",
+  };
+  return translations[type] || type;
+};
+
 export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
@@ -323,7 +335,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                       <span className="text-xs text-muted-foreground/50">لا يوجد</span>
                     )}
                   </TableCell>
-                  <TableCell>{member.subscriptionType.replace(' ', ' - ')}</TableCell>
+                  <TableCell>{translateSubscriptionType(member.subscriptionType)}</TableCell>
                   <TableCell>{format(member.startDate, "PPP", { locale: arSA })}</TableCell>
                   <TableCell>{format(member.endDate, "PPP", { locale: arSA })}</TableCell>
                   <TableCell>
