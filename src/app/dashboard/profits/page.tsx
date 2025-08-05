@@ -22,9 +22,9 @@ type Pricing = {
 
 const formatSubscriptionTypeToKey = (type: string): string => {
   if (!type || typeof type !== 'string') return '';
+  // Converts "Monthly Fitness" to "monthlyFitness"
   const parts = type.split(' ');
-  if (parts.length === 0) return '';
-  if (parts.length === 1) return parts[0].toLowerCase();
+  if (parts.length < 2) return type.toLowerCase();
   return parts[0].toLowerCase() + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
 };
 
@@ -58,7 +58,7 @@ export default function ProfitsPage() {
         const membersList: Member[] = membersSnapshot.docs
             .map(docSnap => {
                 const data = docSnap.data();
-                if (!data.startDate) {
+                if (!data.startDate || !data.subscriptionType) {
                     return null;
                 }
                 const startDate = data.startDate instanceof Timestamp
@@ -67,15 +67,14 @@ export default function ProfitsPage() {
 
                 return {
                     id: docSnap.id,
-                    subscriptionType: data.subscriptionType || '',
+                    subscriptionType: data.subscriptionType,
                     startDate: startDate,
                 };
             })
             .filter((member): member is Member => member !== null);
 
-        const totalMembers = membersList.length;
         let totalRevenue = 0;
-        const monthlyRevenue: { [key: string]: number } = {};
+        const monthlyRevenueData: { [key: string]: number } = {};
 
         membersList.forEach(member => {
           const priceKey = formatSubscriptionTypeToKey(member.subscriptionType);
@@ -83,24 +82,28 @@ export default function ProfitsPage() {
           totalRevenue += price;
 
           if (member.startDate) {
-            const month = member.startDate.toLocaleString('ar-SA', { month: 'short', year: 'numeric' });
-            if (!monthlyRevenue[month]) {
-              monthlyRevenue[month] = 0;
+            // Use a stable, sortable key like 'YYYY-MM'
+            const monthKey = `${member.startDate.getFullYear()}-${(member.startDate.getMonth() + 1).toString().padStart(2, '0')}`;
+            if (!monthlyRevenueData[monthKey]) {
+              monthlyRevenueData[monthKey] = 0;
             }
-            monthlyRevenue[month] += price;
+            monthlyRevenueData[monthKey] += price;
           }
         });
 
+        const totalMembers = membersList.length;
         const averageRevenuePerMember = totalMembers > 0 ? totalRevenue / totalMembers : 0;
         
-        const sortedMonthlyData = Object.entries(monthlyRevenue)
-          .map(([name, total]) => ({ name, total }))
-          .sort((a, b) => {
-              const dateA = new Date(`01 ${a.name.replace(' ', ' ')}`);
-              const dateB = new Date(`01 ${b.name.replace(' ', ' ')}`);
-              return dateA.getTime() - dateB.getTime();
+        const sortedMonthlyData = Object.entries(monthlyRevenueData)
+          .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+          .map(([key, total]) => {
+              const [year, month] = key.split('-');
+              const date = new Date(parseInt(year), parseInt(month) - 1);
+              // Format to "Month Year" in Arabic
+              const name = date.toLocaleString('ar-SA', { month: 'long', year: 'numeric' });
+              return { name, total };
           });
-
+          
         setStats({
           totalRevenue,
           totalMembers,
@@ -120,18 +123,18 @@ export default function ProfitsPage() {
   if (loading) {
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-                <Skeleton className="h-32" />
-                <Skeleton className="h-32" />
-                <Skeleton className="h-32" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
             </div>
-            <Skeleton className="h-[300px]" />
+            <Skeleton className="h-[350px] rounded-lg" />
         </div>
     );
   }
 
   if (!stats) {
-    return <div className="text-center">لا توجد إحصائيات لعرضها.</div>
+    return <div className="text-center py-10">لا توجد إحصائيات لعرضها. قد لا يكون لديك أي أعضاء حتى الآن.</div>
   }
 
   return (
@@ -144,7 +147,7 @@ export default function ProfitsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">الإجمالي من جميع الأعضاء</p>
+            <p className="text-xs text-muted-foreground">الإجمالي من جميع الاشتراكات المسجلة</p>
           </CardContent>
         </Card>
         <Card>
@@ -154,7 +157,7 @@ export default function ProfitsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalMembers}</div>
-            <p className="text-xs text-muted-foreground">جميع الأعضاء النشطين والمنتهية عضويتهم</p>
+            <p className="text-xs text-muted-foreground">العدد الكلي للأعضاء المسجلين</p>
           </CardContent>
         </Card>
         <Card>
@@ -164,26 +167,33 @@ export default function ProfitsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.averageRevenuePerMember.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">متوسط القيمة الدائمة</p>
+            <p className="text-xs text-muted-foreground">متوسط القيمة لكل عضو</p>
           </CardContent>
         </Card>
       </div>
        <Card>
           <CardHeader>
             <CardTitle>نظرة عامة على الإيرادات الشهرية</CardTitle>
+            <CardDescription>
+                عرض تفصيلي للإيرادات المحققة من اشتراكات الأعضاء كل شهر.
+            </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
+            {stats.monthlyRevenue.length > 0 ? (
               <BarChart data={stats.monthlyRevenue}>
                 <XAxis
                   dataKey="name"
-                  stroke="#888888"
+                  stroke="hsl(var(--muted-foreground))"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
                 />
                 <YAxis
-                  stroke="#888888"
+                  stroke="hsl(var(--muted-foreground))"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
@@ -191,6 +201,11 @@ export default function ProfitsPage() {
                 />
                 <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                    لا توجد بيانات كافية لعرض الرسم البياني.
+                </div>
+              )}
             </ResponsiveContainer>
           </CardContent>
         </Card>
