@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type SubscriptionType = 
   | "Daily Iron" | "Daily Fitness"
@@ -298,82 +299,157 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         <CardContent>
           {loading ? (
             <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
+                {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-24 w-full rounded-lg" />
+                ))}
             </div>
           ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead><User className="inline-block ml-2 h-4 w-4" />الاسم</TableHead>
-                <TableHead><Phone className="inline-block ml-2 h-4 w-4" />الهاتف</TableHead>
-                <TableHead>الاشتراك</TableHead>
-                <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ البدء</TableHead>
-                <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ الانتهاء</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>
-                  <span className="sr-only">الإجراءات</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMembers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    {searchQuery ? 'لا يوجد أعضاء يطابقون بحثك.' : 'لا يوجد أعضاء بعد. انقر على "إضافة عضو" للبدء.'}
-                  </TableCell>
-                </TableRow>
-              ) : (
-              filteredMembers.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.name}</TableCell>
-                  <TableCell>
-                    {member.phone ? (
-                      <span className="text-muted-foreground" dir="ltr">{member.phone}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/50">لا يوجد</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{translateSubscriptionType(member.subscriptionType)}</TableCell>
-                  <TableCell>{format(member.startDate, "PPP", { locale: arSA })}</TableCell>
-                  <TableCell>{format(member.endDate, "PPP", { locale: arSA })}</TableCell>
-                  <TableCell>
-                    <Badge variant={member.status === "Active" ? "default" : "destructive"} className={member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">تبديل القائمة</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                        <DropdownMenuItem onSelect={() => openRenewDialog(member)}>
-                           <RefreshCw className="ml-2 h-4 w-4" />
-                           تجديد الاشتراك
-                        </DropdownMenuItem>
-                        {member.status === 'Expired' && member.phone && (
-                          <DropdownMenuItem onSelect={() => handleSendWhatsAppReminder(member)}>
-                            <MessageSquare className="ml-2 h-4 w-4" />
-                            إرسال تذكير
-                          </DropdownMenuItem>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead><User className="inline-block ml-2 h-4 w-4" />الاسم</TableHead>
+                    <TableHead><Phone className="inline-block ml-2 h-4 w-4" />الهاتف</TableHead>
+                    <TableHead>الاشتراك</TableHead>
+                    <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ البدء</TableHead>
+                    <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ الانتهاء</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>
+                      <span className="sr-only">الإجراءات</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMembers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center">
+                        {searchQuery ? 'لا يوجد أعضاء يطابقون بحثك.' : 'لا يوجد أعضاء بعد. انقر على "إضافة عضو" للبدء.'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                  filteredMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell>
+                        {member.phone ? (
+                          <span className="text-muted-foreground" dir="ltr">{member.phone}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/50">لا يوجد</span>
                         )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => handleDeleteMember(member.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                          <Trash2 className="ml-2 h-4 w-4" />
-                          حذف
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+                      </TableCell>
+                      <TableCell>{translateSubscriptionType(member.subscriptionType)}</TableCell>
+                      <TableCell>{format(member.startDate, "PPP", { locale: arSA })}</TableCell>
+                      <TableCell>{format(member.endDate, "PPP", { locale: arSA })}</TableCell>
+                      <TableCell>
+                        <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">تبديل القائمة</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                            <DropdownMenuItem onSelect={() => openRenewDialog(member)}>
+                               <RefreshCw className="ml-2 h-4 w-4" />
+                               تجديد الاشتراك
+                            </DropdownMenuItem>
+                            {member.status === 'Expired' && member.phone && (
+                              <DropdownMenuItem onSelect={() => handleSendWhatsAppReminder(member)}>
+                                <MessageSquare className="ml-2 h-4 w-4" />
+                                إرسال تذكير
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => handleDeleteMember(member.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                              <Trash2 className="ml-2 h-4 w-4" />
+                              حذف
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Mobile Card List */}
+            <div className="md:hidden space-y-4">
+              {filteredMembers.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                    {searchQuery ? 'لا يوجد أعضاء يطابقون بحثك.' : 'لا يوجد أعضاء بعد. انقر على "إضافة عضو" للبدء.'}
+                </div>
+              ) : (
+                 filteredMembers.map((member) => (
+                   <Card key={member.id} className="relative">
+                      <CardContent className="p-4 space-y-3">
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="font-bold text-lg">{member.name}</div>
+                                 <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-xs')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
+                            </div>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 absolute top-2 left-2">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span className="sr-only">تبديل القائمة</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                               <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => openRenewDialog(member)}>
+                                   <RefreshCw className="ml-2 h-4 w-4" />
+                                   تجديد الاشتراك
+                                </DropdownMenuItem>
+                                {member.status === 'Expired' && member.phone && (
+                                  <DropdownMenuItem onSelect={() => handleSendWhatsAppReminder(member)}>
+                                    <MessageSquare className="ml-2 h-4 w-4" />
+                                    إرسال تذكير
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => handleDeleteMember(member.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                  <Trash2 className="ml-2 h-4 w-4" />
+                                  حذف
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                         </div>
+                        
+                         <div className="text-sm text-muted-foreground space-y-2">
+                           {member.phone && (
+                            <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4" />
+                                <span dir="ltr">{member.phone}</span>
+                            </div>
+                           )}
+                           <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                <span>{translateSubscriptionType(member.subscriptionType)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <CalendarIcon className="h-4 w-4" />
+                                <span>يبدأ في: {format(member.startDate, "PPP", { locale: arSA })}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <CalendarIcon className="h-4 w-4" />
+                                <span>ينتهي في: {format(member.endDate, "PPP", { locale: arSA })}</span>
+                            </div>
+                         </div>
+                         
+                      </CardContent>
+                   </Card>
+                 ))
               )}
-            </TableBody>
-          </Table>
+            </div>
+          </>
           )}
         </CardContent>
       </Card>
