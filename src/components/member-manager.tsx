@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare, Phone } from "lucide-react";
 import { format } from "date-fns";
+import { arSA } from "date-fns/locale";
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -323,8 +324,8 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                     )}
                   </TableCell>
                   <TableCell>{member.subscriptionType.replace(' ', ' - ')}</TableCell>
-                  <TableCell>{format(member.startDate, "PPP")}</TableCell>
-                  <TableCell>{format(member.endDate, "PPP")}</TableCell>
+                  <TableCell>{format(member.startDate, "PPP", { locale: arSA })}</TableCell>
+                  <TableCell>{format(member.endDate, "PPP", { locale: arSA })}</TableCell>
                   <TableCell>
                     <Badge variant={member.status === "Active" ? "default" : "destructive"} className={member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
                   </TableCell>
