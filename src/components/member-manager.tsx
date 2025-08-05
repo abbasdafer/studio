@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare, Phone } from "lucide-react";
 import { format } from "date-fns";
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -294,6 +294,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
             <TableHeader>
               <TableRow>
                 <TableHead><User className="inline-block ml-2 h-4 w-4" />الاسم</TableHead>
+                <TableHead><Phone className="inline-block ml-2 h-4 w-4" />الهاتف</TableHead>
                 <TableHead>الاشتراك</TableHead>
                 <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ البدء</TableHead>
                 <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ الانتهاء</TableHead>
@@ -306,7 +307,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
             <TableBody>
               {filteredMembers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     {searchQuery ? 'لا يوجد أعضاء يطابقون بحثك.' : 'لا يوجد أعضاء بعد. انقر على "إضافة عضو" للبدء.'}
                   </TableCell>
                 </TableRow>
@@ -314,6 +315,13 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
               filteredMembers.map((member) => (
                 <TableRow key={member.id}>
                   <TableCell className="font-medium">{member.name}</TableCell>
+                  <TableCell>
+                    {member.phone ? (
+                      <span className="text-muted-foreground" dir="ltr">{member.phone}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">لا يوجد</span>
+                    )}
+                  </TableCell>
                   <TableCell>{member.subscriptionType.replace(' ', ' - ')}</TableCell>
                   <TableCell>{format(member.startDate, "PPP")}</TableCell>
                   <TableCell>{format(member.endDate, "PPP")}</TableCell>
