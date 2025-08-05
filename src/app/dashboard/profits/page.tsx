@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, getDoc, query, where, Timestamp } from 'firebase/firestore';
 import { DollarSign, Users, TrendingUp } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { arSA } from "date-fns/locale";
 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type Member = {
