@@ -141,6 +141,7 @@ export function AuthForm() {
       toast({ title: "تم تسجيل الدخول بنجاح", description: "مرحبًا بعودتك!" });
       router.push("/dashboard");
     } catch (error: any) {
+       console.error("Login failed:", error);
        toast({
         variant: "destructive",
         title: "فشل تسجيل الدخول",
@@ -187,6 +188,7 @@ export function AuthForm() {
       router.push("/dashboard");
 
     } catch (error: any) {
+      console.error("Sign up failed:", error);
       toast({
         variant: "destructive",
         title: "فشل التسجيل",

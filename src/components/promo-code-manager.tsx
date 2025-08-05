@@ -69,9 +69,9 @@ export function PromoCodeManager() {
           ...doc.data()
         } as PromoCode));
         setPromoCodes(codesList);
-      } catch (error) {
-        console.error("Error fetching promo codes: ", error);
-        toast({ variant: 'destructive', title: 'خطأ في جلب الرموز', description: (error as Error).message });
+      } catch (e) {
+        console.error("Error fetching promo codes: ", e);
+        toast({ variant: 'destructive', title: 'خطأ في جلب الرموز', description: (e as Error).message });
       } finally {
         setLoading(false);
       }
@@ -111,7 +111,7 @@ export function PromoCodeManager() {
         setDialogOpen(false);
         setNewCode({ code: "", type: "monthly", maxUses: "1" });
     } catch (e) {
-        console.error("Error adding document: ", e);
+        console.error("Error adding promo code: ", e);
         toast({ variant: 'destructive', title: 'خطأ', description: (e as Error).message || 'لا يمكن إضافة رمز التفعيل.' });
     }
   };
@@ -121,7 +121,8 @@ export function PromoCodeManager() {
         await deleteDoc(doc(db, "promoCodes", id));
         setPromoCodes(promoCodes.filter(c => c.id !== id));
         toast({ title: 'تم حذف رمز الاشتراك.' });
-    } catch (error) {
+    } catch (e) {
+        console.error("Error deleting promo code: ", e);
         toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن حذف رمز الاشتراك.' });
     }
   };

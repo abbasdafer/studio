@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorDisplay } from '@/components/error-display';
 
 type Member = {
   id: string;
@@ -38,6 +39,7 @@ export default function ProfitsPage() {
     monthlyRevenue: { name: string; total: number }[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -46,6 +48,7 @@ export default function ProfitsPage() {
 
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
       try {
         const ownerDocRef = doc(db, 'gymOwners', user.uid);
         const ownerDoc = await getDoc(ownerDocRef);
@@ -101,7 +104,7 @@ export default function ProfitsPage() {
               const [year, month] = key.split('-');
               const date = new Date(parseInt(year), parseInt(month) - 1);
               // Format to "Month Year" in Arabic
-              const name = date.toLocaleString('ar-SA', { month: 'long', year: 'numeric' });
+              const name = date.toLocaleString('ar-SA', { month: 'long', year: 'numeric', timeZone: 'UTC' });
               return { name, total };
           });
           
@@ -112,7 +115,8 @@ export default function ProfitsPage() {
           monthlyRevenue: sortedMonthlyData,
         });
       } catch (e) {
-        console.error("خطأ في جلب البيانات أو معالجتها:", e);
+        console.error("خطأ في جلب بيانات الأرباح:", e);
+        setError((e as Error).message || 'حدث خطأ غير متوقع أثناء حساب الإحصائيات.');
       } finally {
         setLoading(false);
       }
@@ -134,8 +138,12 @@ export default function ProfitsPage() {
     );
   }
 
-  if (!stats) {
-    return <div className="text-center py-10">لا توجد إحصائيات لعرضها. قد لا يكون لديك أي أعضاء حتى الآن.</div>
+  if (error) {
+    return <ErrorDisplay title="فشل في عرض الإحصائيات" message={error} />
+  }
+
+  if (!stats || stats.totalMembers === 0) {
+    return <div className="text-center py-10 text-muted-foreground">لا توجد إحصائيات لعرضها. قد لا يكون لديك أي أعضاء حتى الآن.</div>
   }
 
   return (
@@ -192,6 +200,7 @@ export default function ProfitsPage() {
                   angle={-45}
                   textAnchor="end"
                   height={60}
+                  locale={arSA}
                 />
                 <YAxis
                   stroke="hsl(var(--muted-foreground))"

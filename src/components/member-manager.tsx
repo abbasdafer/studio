@@ -47,6 +47,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ErrorDisplay } from "./error-display";
 
 type SubscriptionType = 
   | "Daily Iron" | "Daily Fitness"
@@ -99,12 +100,15 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const [renewalInfo, setRenewalInfo] = useState<{ member: Member | null; type: SubscriptionType }>({ member: null, type: 'Monthly Iron' });
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchMembers = async () => {
       if (!gymOwnerId) return;
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
         const q = query(collection(db, "members"), where("gymOwnerId", "==", gymOwnerId));
         const querySnapshot = await getDocs(q);
         const membersList = querySnapshot.docs.map(doc => {
@@ -123,9 +127,10 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
             } as Member
         }).sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
         setMembers(membersList);
-      } catch (error) {
-        console.error("Error fetching members: ", error);
-        toast({ variant: 'destructive', title: 'خطأ', description: 'فشل في جلب الأعضاء.' });
+      } catch (e) {
+        console.error("Error fetching members: ", e);
+        setError((e as Error).message || "فشل في جلب الأعضاء من قاعدة البيانات.");
+        toast({ variant: 'destructive', title: 'خطأ في جلب البيانات', description: 'يرجى التحقق من اتصالك بالإنترنت.' });
       } finally {
         setLoading(false);
       }
@@ -171,7 +176,8 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         await deleteDoc(doc(db, "members", id));
         setMembers(members.filter(m => m.id !== id));
         toast({ title: 'تم حذف العضو.' });
-    } catch (error) {
+    } catch (e) {
+        console.error("Error deleting member: ", e);
         toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن حذف العضو.' });
     }
   };
@@ -200,8 +206,8 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         toast({ title: 'نجاح', description: `تم تجديد اشتراك ${renewalInfo.member.name}.` });
         setRenewDialogOpen(false);
         setRenewalInfo({ member: null, type: 'Monthly Iron' });
-    } catch (error) {
-        console.error("Error renewing subscription: ", error);
+    } catch (e) {
+        console.error("Error renewing subscription: ", e);
         toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن تجديد الاشتراك.' });
     }
   };
@@ -303,6 +309,8 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                     <Skeleton key={i} className="h-24 w-full rounded-lg" />
                 ))}
             </div>
+          ) : error ? (
+             <ErrorDisplay title="حدث خطأ في عرض الأعضاء" message={error} />
           ) : (
           <>
             {/* Desktop Table */}
