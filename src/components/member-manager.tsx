@@ -650,5 +650,3 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     </>
   );
 }
-
-    

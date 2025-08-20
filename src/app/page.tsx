@@ -12,6 +12,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,7 @@ export default function Home() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
+                  <DialogTitle className="sr-only">تسجيل الدخول أو إنشاء حساب</DialogTitle>
                   <AuthForm />
               </DialogContent>
             </Dialog>
