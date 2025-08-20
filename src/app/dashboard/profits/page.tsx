@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, getDoc, query, where, Timestamp } from 'firebase/firestore';
-import { DollarSign, Users, TrendingUp } from 'lucide-react';
+import { Users, TrendingUp } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { arSA } from "date-fns/locale";
 
@@ -152,10 +153,10 @@ export default function ProfitsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">د.ع</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{stats.totalRevenue.toLocaleString()} د.ع</div>
             <p className="text-xs text-muted-foreground">الإجمالي من جميع الاشتراكات المسجلة</p>
           </CardContent>
         </Card>
@@ -175,7 +176,7 @@ export default function ProfitsPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.averageRevenuePerMember.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{stats.averageRevenuePerMember.toLocaleString('ar-IQ', { style: 'currency', currency: 'IQD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
             <p className="text-xs text-muted-foreground">متوسط القيمة لكل عضو</p>
           </CardContent>
         </Card>
@@ -207,7 +208,7 @@ export default function ProfitsPage() {
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `$${value}`}
+                  tickFormatter={(value) => `${value.toLocaleString()} د.ع`}
                 />
                 <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>

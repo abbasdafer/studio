@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { DollarSign, Loader2, Mail, Phone, Lock } from "lucide-react";
+import { Loader2, Mail, Phone, Lock } from "lucide-react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -326,15 +326,15 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-4 p-4 border rounded-lg">
                         <h4 className="font-medium text-center text-primary">أسعار اللياقة</h4>
-                        <FormField control={signupForm.control} name="pricing.dailyFitness" render={({ field }) => (<FormItem><FormLabel>يومي</FormLabel><FormControl><div className="relative"><DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={signupForm.control} name="pricing.weeklyFitness" render={({ field }) => (<FormItem><FormLabel>أسبوعي</FormLabel><FormControl><div className="relative"><DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={signupForm.control} name="pricing.monthlyFitness" render={({ field }) => (<FormItem><FormLabel>شهري</FormLabel><FormControl><div className="relative"><DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={signupForm.control} name="pricing.dailyFitness" render={({ field }) => (<FormItem><FormLabel>يومي</FormLabel><FormControl><div className="relative"><span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span><Input type="number" placeholder="0" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={signupForm.control} name="pricing.weeklyFitness" render={({ field }) => (<FormItem><FormLabel>أسبوعي</FormLabel><FormControl><div className="relative"><span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span><Input type="number" placeholder="0" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={signupForm.control} name="pricing.monthlyFitness" render={({ field }) => (<FormItem><FormLabel>شهري</FormLabel><FormControl><div className="relative"><span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span><Input type="number" placeholder="0" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
                         </div>
                         <div className="space-y-4 p-4 border rounded-lg">
                         <h4 className="font-medium text-center text-primary">أسعار الحديد</h4>
-                        <FormField control={signupForm.control} name="pricing.dailyIron" render={({ field }) => (<FormItem><FormLabel>يومي</FormLabel><FormControl><div className="relative"><DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={signupForm.control} name="pricing.weeklyIron" render={({ field }) => (<FormItem><FormLabel>أسبوعي</FormLabel><FormControl><div className="relative"><DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
-                        <FormField control={signupForm.control} name="pricing.monthlyIron" render={({ field }) => (<FormItem><FormLabel>شهري</FormLabel><FormControl><div className="relative"><DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input type="number" placeholder="0.00" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={signupForm.control} name="pricing.dailyIron" render={({ field }) => (<FormItem><FormLabel>يومي</FormLabel><FormControl><div className="relative"><span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span><Input type="number" placeholder="0" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={signupForm.control} name="pricing.weeklyIron" render={({ field }) => (<FormItem><FormLabel>أسبوعي</FormLabel><FormControl><div className="relative"><span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span><Input type="number" placeholder="0" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={signupForm.control} name="pricing.monthlyIron" render={({ field }) => (<FormItem><FormLabel>شهري</FormLabel><FormControl><div className="relative"><span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span><Input type="number" placeholder="0" className="pr-8" {...field} /></div></FormControl><FormMessage /></FormItem>)} />
                         </div>
                     </div>
                   </div>

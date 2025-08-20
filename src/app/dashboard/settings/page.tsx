@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useEffect, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { DollarSign, Loader2, Settings } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -152,8 +152,8 @@ export default function SettingsPage() {
                             <FormLabel>السعر اليومي</FormLabel>
                             <FormControl>
                                 <div className="relative">
-                                    <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input type="number" placeholder="0.00" className="pr-8" {...field} />
+                                    <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
                                 </div>
                             </FormControl>
                             <FormMessage />
@@ -168,8 +168,8 @@ export default function SettingsPage() {
                             <FormLabel>السعر الأسبوعي</FormLabel>
                             <FormControl>
                                 <div className="relative">
-                                    <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input type="number" placeholder="0.00" className="pr-8" {...field} />
+                                     <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
                                 </div>
                             </FormControl>
                             <FormMessage />
@@ -184,8 +184,8 @@ export default function SettingsPage() {
                             <FormLabel>السعر الشهري</FormLabel>
                             <FormControl>
                                 <div className="relative">
-                                    <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input type="number" placeholder="0.00" className="pr-8" {...field} />
+                                     <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
                                 </div>
                             </FormControl>
                             <FormMessage />
@@ -210,8 +210,8 @@ export default function SettingsPage() {
                             <FormLabel>السعر اليومي</FormLabel>
                             <FormControl>
                                 <div className="relative">
-                                    <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input type="number" placeholder="0.00" className="pr-8" {...field} />
+                                     <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
                                 </div>
                             </FormControl>
                             <FormMessage />
@@ -226,8 +226,8 @@ export default function SettingsPage() {
                             <FormLabel>السعر الأسبوعي</FormLabel>
                             <FormControl>
                                 <div className="relative">
-                                    <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input type="number" placeholder="0.00" className="pr-8" {...field} />
+                                    <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
                                 </div>
                             </FormControl>
                             <FormMessage />
@@ -242,8 +242,8 @@ export default function SettingsPage() {
                             <FormLabel>السعر الشهري</FormLabel>
                             <FormControl>
                                 <div className="relative">
-                                    <DollarSign className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input type="number" placeholder="0.00" className="pr-8" {...field} />
+                                    <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
                                 </div>
                             </FormControl>
                             <FormMessage />
