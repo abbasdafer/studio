@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare, Phone } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare, Phone, Flame } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Link from "next/link";
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -46,11 +48,18 @@ import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "./error-display";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Checkbox } from "./ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 
 type SubscriptionPeriod = "Daily" | "Weekly" | "Monthly";
 type SubscriptionClass = "Iron" | "Fitness";
 type SubscriptionType = string; // e.g., "Daily Iron", "Weekly Fitness", "Monthly Iron & Fitness"
-
 
 type Member = {
   id: string;
@@ -61,9 +70,14 @@ type Member = {
   endDate: Date;
   status: "Active" | "Expired";
   gymOwnerId: string;
+  age?: number;
+  weight?: number;
+  height?: number;
+  gender?: "male" | "female";
+  dailyCalories?: number;
 };
 
-const subscriptionSchema = z.object({
+const memberSchema = z.object({
     name: z.string().min(1, { message: "اسم العضو مطلوب." }),
     phone: z.string().optional(),
     period: z.enum(["Daily", "Weekly", "Monthly"], {
@@ -72,7 +86,30 @@ const subscriptionSchema = z.object({
     classes: z.array(z.string()).refine((value) => value.some((item) => item), {
         message: "يجب اختيار نوع تمرين واحد على الأقل.",
     }),
+    gender: z.enum(["male", "female"], { required_error: "يجب تحديد الجنس."}),
+    age: z.coerce.number().min(10, "يجب أن يكون العمر 10 سنوات على الأقل.").max(100, "يجب أن يكون العمر أقل من 100 سنة."),
+    weight: z.coerce.number().min(30, "يجب أن يكون الوزن 30 كجم على الأقل."),
+    height: z.coerce.number().min(100, "يجب أن يكون الطول 100 سم على الأقل."),
 });
+
+const renewSchema = z.object({
+     period: z.enum(["Daily", "Weekly", "Monthly"], {
+        required_error: "يجب اختيار فترة زمنية.",
+    }),
+    classes: z.array(z.string()).refine((value) => value.some((item) => item), {
+        message: "يجب اختيار نوع تمرين واحد على الأقل.",
+    }),
+});
+
+const calculateBMR = (gender: "male" | "female", weight: number, height: number, age: number): number => {
+  // Mifflin-St Jeor Equation
+  if (gender === "male") {
+    return Math.round(10 * weight + 6.25 * height - 5 * age + 5);
+  } else {
+    return Math.round(10 * weight + 6.25 * height - 5 * age - 161);
+  }
+};
+
 
 const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
   const date = new Date(startDate);
@@ -128,14 +165,14 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const addForm = useForm<z.infer<typeof subscriptionSchema>>({
-    resolver: zodResolver(subscriptionSchema),
-    defaultValues: { name: "", phone: "", period: "Monthly", classes: ["Iron"] },
+  const addForm = useForm<z.infer<typeof memberSchema>>({
+    resolver: zodResolver(memberSchema),
+    defaultValues: { name: "", phone: "", period: "Monthly", classes: ["Iron"], age: 18, weight: 70, height: 170 },
   });
 
-  const renewForm = useForm<z.infer<typeof subscriptionSchema>>({
-    resolver: zodResolver(subscriptionSchema),
-    defaultValues: { name: "", phone: "", period: "Monthly", classes: ["Iron"] },
+  const renewForm = useForm<z.infer<typeof renewSchema>>({
+    resolver: zodResolver(renewSchema),
+    defaultValues: { period: "Monthly", classes: ["Iron"] },
   });
 
 
@@ -153,13 +190,10 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
             const status = new Date() > endDate ? 'Expired' : 'Active';
             return {
                 id: doc.id,
-                name: data.name,
-                phone: data.phone,
-                subscriptionType: data.subscriptionType,
+                ...data,
                 startDate: data.startDate.toDate(),
                 endDate: endDate,
                 status: status,
-                gymOwnerId: data.gymOwnerId
             } as Member
         }).sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
         setMembers(membersList);
@@ -175,10 +209,11 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     fetchMembers();
   }, [gymOwnerId, toast]);
 
-  const handleAddMember = async (values: z.infer<typeof subscriptionSchema>) => {
+  const handleAddMember = async (values: z.infer<typeof memberSchema>) => {
     const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes as SubscriptionClass[]);
     const startDate = new Date();
     const endDate = calculateEndDate(startDate, subscriptionType);
+    const dailyCalories = calculateBMR(values.gender, values.weight, values.height, values.age);
 
     const newMemberData = {
       name: values.name,
@@ -188,13 +223,18 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
       endDate,
       status: 'Active' as 'Active' | 'Expired',
       gymOwnerId,
+      gender: values.gender,
+      age: values.age,
+      weight: values.weight,
+      height: values.height,
+      dailyCalories: dailyCalories
     };
 
     try {
         const docRef = await addDoc(collection(db, "members"), newMemberData);
-        const addedMember = { id: docRef.id, ...newMemberData };
+        const addedMember: Member = { id: docRef.id, ...newMemberData };
         setMembers(prev => [addedMember, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
-        toast({ title: 'نجاح', description: 'تمت إضافة عضو جديد.' });
+        toast({ title: 'نجاح', description: `تمت إضافة عضو جديد. السعرات الحرارية المحسوبة: ${dailyCalories}` });
         setAddDialogOpen(false);
         addForm.reset();
     } catch (e) {
@@ -214,7 +254,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     }
   };
 
-  const handleRenewSubscription = async (values: z.infer<typeof subscriptionSchema>) => {
+  const handleRenewSubscription = async (values: z.infer<typeof renewSchema>) => {
     if (!renewalMember) return;
     
     const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes as SubscriptionClass[]);
@@ -258,8 +298,6 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const openRenewDialog = (member: Member) => {
     setRenewalMember(member);
     renewForm.reset({
-        name: member.name,
-        phone: member.phone,
         period: "Monthly",
         classes: ["Iron"],
     });
@@ -299,26 +337,64 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                         <span className="hidden sm:inline">إضافة عضو</span>
                     </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
                         <DialogTitle>إضافة عضو جديد</DialogTitle>
                         <DialogDescription>
-                        أدخل تفاصيل العضو الجديد لإضافته.
+                         أدخل تفاصيل العضو الجديد. سيتم حساب السعرات الحرارية تلقائياً.
                         </DialogDescription>
                     </DialogHeader>
                      <form onSubmit={addForm.handleSubmit(handleAddMember)}>
                         <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label htmlFor="name" className="text-right">الاسم</Label>
-                              <Input id="name" {...addForm.register("name")} className="col-span-3" placeholder="الاسم الكامل للعضو" />
+                            <div className="grid grid-cols-2 gap-4">
+                               <div className="space-y-2">
+                                  <Label htmlFor="name">الاسم الكامل</Label>
+                                  <Input id="name" {...addForm.register("name")} placeholder="الاسم الكامل للعضو" />
+                                   {addForm.formState.errors.name && <p className="text-red-500 text-xs">{addForm.formState.errors.name.message}</p>}
+                               </div>
+                               <div className="space-y-2">
+                                  <Label htmlFor="phone">الهاتف (اختياري)</Label>
+                                  <Input id="phone" {...addForm.register("phone")} placeholder="9665xxxxxxxx" />
+                               </div>
                             </div>
-                             {addForm.formState.errors.name && <p className="text-red-500 text-xs col-span-4 text-left ml-24">{addForm.formState.errors.name.message}</p>}
 
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label htmlFor="phone" className="text-right">الهاتف</Label>
-                              <Input id="phone" {...addForm.register("phone")} className="col-span-3" placeholder="مثال: 9665xxxxxxxx (اختياري)" />
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="gender">الجنس</Label>
+                                    <Controller
+                                        name="gender"
+                                        control={addForm.control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="اختر الجنس" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="male">ذكر</SelectItem>
+                                                    <SelectItem value="female">أنثى</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {addForm.formState.errors.gender && <p className="text-red-500 text-xs">{addForm.formState.errors.gender.message}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="age">العمر</Label>
+                                    <Input id="age" type="number" {...addForm.register("age")} />
+                                    {addForm.formState.errors.age && <p className="text-red-500 text-xs">{addForm.formState.errors.age.message}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="weight">الوزن (كجم)</Label>
+                                    <Input id="weight" type="number" {...addForm.register("weight")} />
+                                     {addForm.formState.errors.weight && <p className="text-red-500 text-xs">{addForm.formState.errors.weight.message}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="height">الطول (سم)</Label>
+                                    <Input id="height" type="number" {...addForm.register("height")} />
+                                    {addForm.formState.errors.height && <p className="text-red-500 text-xs">{addForm.formState.errors.height.message}</p>}
+                                </div>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4 pt-4">
                                 <div className="space-y-2">
                                      <Label>الفترة الزمنية</Label>
@@ -418,9 +494,9 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                     <TableHead><User className="inline-block ml-2 h-4 w-4" />الاسم</TableHead>
                     <TableHead><Phone className="inline-block ml-2 h-4 w-4" />الهاتف</TableHead>
                     <TableHead>الاشتراك</TableHead>
-                    <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ البدء</TableHead>
                     <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ الانتهاء</TableHead>
                     <TableHead>الحالة</TableHead>
+                     <TableHead><Flame className="inline-block ml-2 h-4 w-4" />السعرات (BMR)</TableHead>
                     <TableHead>
                       <span className="sr-only">الإجراءات</span>
                     </TableHead>
@@ -436,7 +512,11 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                   ) : (
                   filteredMembers.map((member) => (
                     <TableRow key={member.id}>
-                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link href={`/dashboard/members/${member.id}`} className="hover:underline text-primary">
+                          {member.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>
                         {member.phone ? (
                           <span className="text-muted-foreground" dir="ltr">{member.phone}</span>
@@ -445,11 +525,11 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                         )}
                       </TableCell>
                       <TableCell>{translateSubscriptionType(member.subscriptionType)}</TableCell>
-                      <TableCell>{format(member.startDate, "PPP", { locale: arSA })}</TableCell>
                       <TableCell>{format(member.endDate, "PPP", { locale: arSA })}</TableCell>
                       <TableCell>
                         <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
                       </TableCell>
+                       <TableCell>{member.dailyCalories || 'N/A'}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -496,10 +576,9 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                    <Card key={member.id} className="relative">
                       <CardContent className="p-4 space-y-3">
                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="font-bold text-lg">{member.name}</div>
-                                 <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-xs')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
-                            </div>
+                            <Link href={`/dashboard/members/${member.id}`} className="font-bold text-lg hover:underline text-primary">
+                                {member.name}
+                            </Link>
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 absolute top-2 left-2">
@@ -527,6 +606,8 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                               </DropdownMenuContent>
                             </DropdownMenu>
                          </div>
+                         
+                         <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-xs w-fit')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
                         
                          <div className="text-sm text-muted-foreground space-y-2">
                            {member.phone && (
@@ -541,11 +622,11 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                             </div>
                             <div className="flex items-center gap-2">
                                 <CalendarIcon className="h-4 w-4" />
-                                <span>يبدأ في: {format(member.startDate, "PPP", { locale: arSA })}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <CalendarIcon className="h-4 w-4" />
                                 <span>ينتهي في: {format(member.endDate, "PPP", { locale: arSA })}</span>
+                            </div>
+                             <div className="flex items-center gap-2">
+                                <Flame className="h-4 w-4" />
+                                <span>السعرات: {member.dailyCalories || 'N/A'}</span>
                             </div>
                          </div>
                          

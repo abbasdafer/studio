@@ -3,7 +3,7 @@
 import { MemberManager } from "@/components/member-manager";
 import { useAuth } from "@/hooks/use-auth";
 
-export default function DashboardPage() {
+export default function DashboardMembersPage() {
   const { user, loading } = useAuth();
   
   if (loading || !user) {

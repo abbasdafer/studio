@@ -18,6 +18,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/members',
+        destination: '/dashboard',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default nextConfig;
