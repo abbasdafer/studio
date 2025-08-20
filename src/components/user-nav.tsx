@@ -37,6 +37,17 @@ export function UserNav() {
     router.push("/");
     return null;
   }
+  
+  const getInitials = (email?: string | null, phone?: string | null) => {
+      if (email) {
+          return email.charAt(0).toUpperCase();
+      }
+      if (phone) {
+          // Get last two digits as initials for privacy
+          return phone.slice(-2);
+      }
+      return 'U'; // U for User
+  }
 
   return (
     <DropdownMenu>
@@ -44,7 +55,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
              {/* You can add user avatar logic here later */}
-            <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{getInitials(user.email, user.phoneNumber)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -53,7 +64,7 @@ export function UserNav() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">مدير النادي</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
+              {user.email || user.phoneNumber}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -85,3 +96,5 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
+
+    
