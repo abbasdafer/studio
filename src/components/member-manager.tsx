@@ -55,6 +55,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "./ui/separator";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 
 
 type SubscriptionPeriod = "Daily" | "Weekly" | "Monthly";
@@ -337,139 +339,128 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                         <span className="hidden sm:inline">إضافة عضو</span>
                     </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
+                    <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>إضافة عضو جديد</DialogTitle>
                         <DialogDescription>
                          أدخل تفاصيل العضو الجديد. سيتم حساب السعرات الحرارية تلقائياً.
                         </DialogDescription>
                     </DialogHeader>
-                     <form onSubmit={addForm.handleSubmit(handleAddMember)}>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                               <div className="space-y-2">
-                                  <Label htmlFor="name">الاسم الكامل</Label>
-                                  <Input id="name" {...addForm.register("name")} placeholder="الاسم الكامل للعضو" />
-                                   {addForm.formState.errors.name && <p className="text-red-500 text-xs">{addForm.formState.errors.name.message}</p>}
-                               </div>
-                               <div className="space-y-2">
-                                  <Label htmlFor="phone">الهاتف (اختياري)</Label>
-                                  <Input id="phone" {...addForm.register("phone")} placeholder="9665xxxxxxxx" />
-                               </div>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="gender">الجنس</Label>
-                                    <Controller
-                                        name="gender"
-                                        control={addForm.control}
-                                        render={({ field }) => (
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="اختر الجنس" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="male">ذكر</SelectItem>
-                                                    <SelectItem value="female">أنثى</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        )}
-                                    />
-                                    {addForm.formState.errors.gender && <p className="text-red-500 text-xs">{addForm.formState.errors.gender.message}</p>}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="age">العمر</Label>
-                                    <Input id="age" type="number" {...addForm.register("age")} />
-                                    {addForm.formState.errors.age && <p className="text-red-500 text-xs">{addForm.formState.errors.age.message}</p>}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="weight">الوزن (كجم)</Label>
-                                    <Input id="weight" type="number" {...addForm.register("weight")} />
-                                     {addForm.formState.errors.weight && <p className="text-red-500 text-xs">{addForm.formState.errors.weight.message}</p>}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="height">الطول (سم)</Label>
-                                    <Input id="height" type="number" {...addForm.register("height")} />
-                                    {addForm.formState.errors.height && <p className="text-red-500 text-xs">{addForm.formState.errors.height.message}</p>}
+                     <Form {...addForm}>
+                        <form onSubmit={addForm.handleSubmit(handleAddMember)} className="space-y-6">
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-medium text-primary">المعلومات الشخصية</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={addForm.control} name="name" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الاسم الكامل</FormLabel>
+                                            <FormControl><Input placeholder="الاسم الكامل للعضو" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={addForm.control} name="phone" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الهاتف (اختياري)</FormLabel>
+                                            <FormControl><Input placeholder="+9665xxxxxxxx" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4 pt-4">
-                                <div className="space-y-2">
-                                     <Label>الفترة الزمنية</Label>
-                                     <Controller
-                                        control={addForm.control}
-                                        name="period"
-                                        render={({ field }) => (
-                                             <RadioGroup
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value}
-                                                className="space-y-2"
-                                            >
-                                                <div className="flex items-center space-x-2 space-x-reverse">
-                                                    <RadioGroupItem value="Daily" id="d1" />
-                                                    <Label htmlFor="d1">يومي</Label>
-                                                </div>
-                                                <div className="flex items-center space-x-2 space-x-reverse">
-                                                    <RadioGroupItem value="Weekly" id="d2" />
-                                                    <Label htmlFor="d2">أسبوعي</Label>
-                                                </div>
-                                                 <div className="flex items-center space-x-2 space-x-reverse">
-                                                    <RadioGroupItem value="Monthly" id="d3" />
-                                                    <Label htmlFor="d3">شهري</Label>
-                                                </div>
-                                            </RadioGroup>
-                                        )}
-                                    />
-                                    {addForm.formState.errors.period && <p className="text-red-500 text-xs">{addForm.formState.errors.period.message}</p>}
+                            <Separator />
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-medium text-primary">القياسات الجسدية</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <FormField control={addForm.control} name="gender" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الجنس</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger><SelectValue placeholder="اختر الجنس" /></SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="male">ذكر</SelectItem>
+                                                        <SelectItem value="female">أنثى</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                     <FormField control={addForm.control} name="age" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>العمر</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                     <FormField control={addForm.control} name="weight" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الوزن (كجم)</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                     <FormField control={addForm.control} name="height" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الطول (سم)</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>نوع التمرين</Label>
-                                    <Controller
-                                        name="classes"
-                                        control={addForm.control}
-                                        render={() => (
-                                            <div className="space-y-2">
-                                                 <div className="flex items-center space-x-2 space-x-reverse">
-                                                    <Checkbox id="c1"
-                                                        defaultChecked={addForm.getValues("classes").includes("Iron")}
-                                                        onCheckedChange={(checked) => {
-                                                          const currentClasses = addForm.getValues("classes") || [];
-                                                          const newClasses = checked
-                                                            ? [...currentClasses, "Iron"]
-                                                            : currentClasses.filter((c) => c !== "Iron");
-                                                          addForm.setValue("classes", newClasses, { shouldValidate: true });
-                                                        }}
-                                                    />
-                                                    <Label htmlFor="c1">حديد</Label>
-                                                 </div>
-                                                  <div className="flex items-center space-x-2 space-x-reverse">
-                                                     <Checkbox id="c2"
-                                                        defaultChecked={addForm.getValues("classes").includes("Fitness")}
-                                                        onCheckedChange={(checked) => {
-                                                          const currentClasses = addForm.getValues("classes") || [];
-                                                          const newClasses = checked
-                                                            ? [...currentClasses, "Fitness"]
-                                                            : currentClasses.filter((c) => c !== "Fitness");
-                                                          addForm.setValue("classes", newClasses, { shouldValidate: true });
-                                                        }}
-                                                     />
-                                                    <Label htmlFor="c2">لياقة</Label>
-                                                  </div>
+                            </div>
+                            <Separator />
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-medium text-primary">تفاصيل الاشتراك</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormField control={addForm.control} name="period" render={({ field }) => (
+                                        <FormItem className="space-y-3">
+                                            <FormLabel>الفترة الزمنية</FormLabel>
+                                            <FormControl>
+                                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-1">
+                                                    <FormItem className="flex items-center space-x-3 space-x-reverse"><FormControl><RadioGroupItem value="Daily" /></FormControl><FormLabel className="font-normal">يومي</FormLabel></FormItem>
+                                                    <FormItem className="flex items-center space-x-3 space-x-reverse"><FormControl><RadioGroupItem value="Weekly" /></FormControl><FormLabel className="font-normal">أسبوعي</FormLabel></FormItem>
+                                                    <FormItem className="flex items-center space-x-3 space-x-reverse"><FormControl><RadioGroupItem value="Monthly" /></FormControl><FormLabel className="font-normal">شهري</FormLabel></FormItem>
+                                                </RadioGroup>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={addForm.control} name="classes" render={({ field }) => (
+                                        <FormItem>
+                                             <div className="mb-4">
+                                                <FormLabel>نوع التمرين</FormLabel>
                                             </div>
-                                        )}
-                                    />
-                                     {addForm.formState.errors.classes && <p className="text-red-500 text-xs">{addForm.formState.errors.classes.message}</p>}
+                                            {[{id: "Iron", label: "حديد"}, {id: "Fitness", label: "لياقة"}].map((item) => (
+                                                <FormField key={item.id} control={addForm.control} name="classes" render={({ field }) => {
+                                                    return (
+                                                        <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-x-reverse">
+                                                            <FormControl>
+                                                                <Checkbox
+                                                                    checked={field.value?.includes(item.id)}
+                                                                    onCheckedChange={(checked) => {
+                                                                        return checked
+                                                                        ? field.onChange([...(field.value || []), item.id])
+                                                                        : field.onChange(field.value?.filter((value) => value !== item.id))
+                                                                    }}
+                                                                />
+                                                            </FormControl>
+                                                            <FormLabel className="font-normal">{item.label}</FormLabel>
+                                                        </FormItem>
+                                                    )
+                                                }} />
+                                            ))}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
                                 </div>
                             </div>
-
-                        </div>
-                        <DialogFooter>
-                            <Button type="button" onClick={() => setAddDialogOpen(false)} variant="outline">إلغاء</Button>
-                            <Button type="submit" disabled={addForm.formState.isSubmitting}>إضافة عضو</Button>
-                        </DialogFooter>
-                    </form>
+                            <DialogFooter className="pt-6">
+                                <Button type="button" onClick={() => setAddDialogOpen(false)} variant="outline">إلغاء</Button>
+                                <Button type="submit" disabled={addForm.formState.isSubmitting}>إضافة عضو</Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
                     </DialogContent>
                 </Dialog>
             </div>
