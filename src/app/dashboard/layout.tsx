@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -5,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect } from 'react';
-import { Dumbbell, LineChart, Users, Loader2 } from 'lucide-react';
+import { Dumbbell, LineChart, Users, Loader2, Settings } from 'lucide-react';
 import { UserNav } from '@/components/user-nav';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,7 @@ export default function DashboardLayout({
   const navLinks = [
       { href: '/dashboard', label: 'الأعضاء', icon: Users },
       { href: '/dashboard/profits', label: 'الأرباح', icon: LineChart },
+      { href: '/dashboard/settings', label: 'الإعدادات', icon: Settings },
   ]
 
   return (

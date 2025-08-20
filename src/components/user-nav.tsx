@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -68,9 +69,11 @@ export function UserNav() {
             <User className="ml-2 h-4 w-4" />
             <span>الملف الشخصي</span>
           </DropdownMenuItem>
-           <DropdownMenuItem disabled>
-            <Settings className="ml-2 h-4 w-4" />
-            <span>الإعدادات</span>
+           <DropdownMenuItem asChild>
+             <Link href="/dashboard/settings">
+                <Settings className="ml-2 h-4 w-4" />
+                <span>الإعدادات</span>
+             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
