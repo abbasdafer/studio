@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare, Phone } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
@@ -34,13 +37,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -48,11 +44,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Skeleton } from "./ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ErrorDisplay } from "./error-display";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Checkbox } from "./ui/checkbox";
 
-type SubscriptionType = 
-  | "Daily Iron" | "Daily Fitness"
-  | "Weekly Iron" | "Weekly Fitness"
-  | "Monthly Iron" | "Monthly Fitness";
+type SubscriptionPeriod = "Daily" | "Weekly" | "Monthly";
+type SubscriptionClass = "Iron" | "Fitness";
+type SubscriptionType = string; // e.g., "Daily Iron", "Weekly Fitness", "Monthly Iron & Fitness"
+
 
 type Member = {
   id: string;
@@ -64,6 +62,17 @@ type Member = {
   status: "Active" | "Expired";
   gymOwnerId: string;
 };
+
+const subscriptionSchema = z.object({
+    name: z.string().min(1, { message: "اسم العضو مطلوب." }),
+    phone: z.string().optional(),
+    period: z.enum(["Daily", "Weekly", "Monthly"], {
+        required_error: "يجب اختيار فترة زمنية.",
+    }),
+    classes: z.array(z.string()).refine((value) => value.some((item) => item), {
+        message: "يجب اختيار نوع تمرين واحد على الأقل.",
+    }),
+});
 
 const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
   const date = new Date(startDate);
@@ -79,16 +88,34 @@ const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
   return date;
 };
 
+const formatSubscriptionType = (period: SubscriptionPeriod, classes: SubscriptionClass[]): SubscriptionType => {
+    const classString = classes.sort().join(" & ");
+    return `${period} ${classString}`;
+}
+
 const translateSubscriptionType = (type: SubscriptionType): string => {
-  const translations: Record<SubscriptionType, string> = {
-    "Daily Iron": "يومي - حديد",
-    "Daily Fitness": "يومي - لياقة",
-    "Weekly Iron": "أسبوعي - حديد",
-    "Weekly Fitness": "أسبوعي - لياقة",
-    "Monthly Iron": "شهري - حديد",
-    "Monthly Fitness": "شهري - لياقة",
+  if (!type) return type;
+  const parts = type.split(" ");
+  const period = parts[0];
+  const classes = parts.slice(1).join(" ");
+
+  const periodTranslations: Record<string, string> = {
+    "Daily": "يومي",
+    "Weekly": "أسبوعي",
+    "Monthly": "شهري",
   };
-  return translations[type] || type;
+
+  const classTranslations: Record<string, string> = {
+    "Iron": "حديد",
+    "Fitness": "لياقة",
+    "Iron & Fitness": "حديد و لياقة",
+    "Fitness & Iron": "حديد و لياقة"
+  };
+  
+  const translatedPeriod = periodTranslations[period] || period;
+  const translatedClasses = classTranslations[classes] || classes;
+
+  return `${translatedPeriod} - ${translatedClasses}`;
 };
 
 export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
@@ -96,11 +123,20 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [isRenewDialogOpen, setRenewDialogOpen] = useState(false);
-  const [newMember, setNewMember] = useState({ name: "", phone: "", subscriptionType: "Monthly Iron" as SubscriptionType });
-  const [renewalInfo, setRenewalInfo] = useState<{ member: Member | null; type: SubscriptionType }>({ member: null, type: 'Monthly Iron' });
+  const [renewalMember, setRenewalMember] = useState<Member | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const addForm = useForm<z.infer<typeof subscriptionSchema>>({
+    resolver: zodResolver(subscriptionSchema),
+    defaultValues: { name: "", phone: "", period: "Monthly", classes: ["Iron"] },
+  });
+
+  const renewForm = useForm<z.infer<typeof subscriptionSchema>>({
+    resolver: zodResolver(subscriptionSchema),
+    defaultValues: { name: "", phone: "", period: "Monthly", classes: ["Iron"] },
+  });
 
 
   useEffect(() => {
@@ -139,19 +175,15 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     fetchMembers();
   }, [gymOwnerId, toast]);
 
-  const handleAddMember = async () => {
-    if (!newMember.name || !newMember.subscriptionType) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'اسم العضو ونوع الاشتراك مطلوبان.' });
-      return;
-    }
-    
+  const handleAddMember = async (values: z.infer<typeof subscriptionSchema>) => {
+    const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes as SubscriptionClass[]);
     const startDate = new Date();
-    const endDate = calculateEndDate(startDate, newMember.subscriptionType);
+    const endDate = calculateEndDate(startDate, subscriptionType);
 
     const newMemberData = {
-      name: newMember.name,
-      phone: newMember.phone || "",
-      subscriptionType: newMember.subscriptionType,
+      name: values.name,
+      phone: values.phone || "",
+      subscriptionType,
       startDate,
       endDate,
       status: 'Active' as 'Active' | 'Expired',
@@ -164,7 +196,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
         setMembers(prev => [addedMember, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
         toast({ title: 'نجاح', description: 'تمت إضافة عضو جديد.' });
         setAddDialogOpen(false);
-        setNewMember({ name: "", phone: "", subscriptionType: "Monthly Iron" });
+        addForm.reset();
     } catch (e) {
         console.error("Error adding document: ", e);
         toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن إضافة العضو.' });
@@ -182,30 +214,31 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     }
   };
 
-  const handleRenewSubscription = async () => {
-    if (!renewalInfo.member) return;
-
+  const handleRenewSubscription = async (values: z.infer<typeof subscriptionSchema>) => {
+    if (!renewalMember) return;
+    
+    const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes as SubscriptionClass[]);
     const startDate = new Date();
-    const endDate = calculateEndDate(startDate, renewalInfo.type);
+    const endDate = calculateEndDate(startDate, subscriptionType);
     
     try {
-        const memberRef = doc(db, "members", renewalInfo.member.id);
+        const memberRef = doc(db, "members", renewalMember.id);
         await updateDoc(memberRef, {
-            subscriptionType: renewalInfo.type,
-            startDate: startDate,
-            endDate: endDate,
+            subscriptionType,
+            startDate,
+            endDate,
             status: 'Active'
         });
 
         setMembers(prevMembers => prevMembers.map(m => 
-            m.id === renewalInfo.member!.id 
-            ? { ...m, subscriptionType: renewalInfo.type, startDate, endDate, status: 'Active' }
+            m.id === renewalMember.id 
+            ? { ...m, subscriptionType, startDate, endDate, status: 'Active' }
             : m
         ).sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
 
-        toast({ title: 'نجاح', description: `تم تجديد اشتراك ${renewalInfo.member.name}.` });
+        toast({ title: 'نجاح', description: `تم تجديد اشتراك ${renewalMember.name}.` });
         setRenewDialogOpen(false);
-        setRenewalInfo({ member: null, type: 'Monthly Iron' });
+        setRenewalMember(null);
     } catch (e) {
         console.error("Error renewing subscription: ", e);
         toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن تجديد الاشتراك.' });
@@ -223,7 +256,13 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   };
 
   const openRenewDialog = (member: Member) => {
-    setRenewalInfo({ member, type: member.subscriptionType });
+    setRenewalMember(member);
+    renewForm.reset({
+        name: member.name,
+        phone: member.phone,
+        period: "Monthly",
+        classes: ["Iron"],
+    });
     setRenewDialogOpen(true);
   };
   
@@ -267,36 +306,94 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                         أدخل تفاصيل العضو الجديد لإضافته.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="name" className="text-right">الاسم</Label>
-                          <Input id="name" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className="col-span-3" placeholder="الاسم الكامل للعضو" />
+                     <form onSubmit={addForm.handleSubmit(handleAddMember)}>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label htmlFor="name" className="text-right">الاسم</Label>
+                              <Input id="name" {...addForm.register("name")} className="col-span-3" placeholder="الاسم الكامل للعضو" />
+                            </div>
+                             {addForm.formState.errors.name && <p className="text-red-500 text-xs col-span-4 text-left ml-24">{addForm.formState.errors.name.message}</p>}
+
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label htmlFor="phone" className="text-right">الهاتف</Label>
+                              <Input id="phone" {...addForm.register("phone")} className="col-span-3" placeholder="مثال: 9665xxxxxxxx (اختياري)" />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 pt-4">
+                                <div className="space-y-2">
+                                     <Label>الفترة الزمنية</Label>
+                                     <Controller
+                                        control={addForm.control}
+                                        name="period"
+                                        render={({ field }) => (
+                                             <RadioGroup
+                                                onValueChange={field.onChange}
+                                                defaultValue={field.value}
+                                                className="space-y-2"
+                                            >
+                                                <div className="flex items-center space-x-2 space-x-reverse">
+                                                    <RadioGroupItem value="Daily" id="d1" />
+                                                    <Label htmlFor="d1">يومي</Label>
+                                                </div>
+                                                <div className="flex items-center space-x-2 space-x-reverse">
+                                                    <RadioGroupItem value="Weekly" id="d2" />
+                                                    <Label htmlFor="d2">أسبوعي</Label>
+                                                </div>
+                                                 <div className="flex items-center space-x-2 space-x-reverse">
+                                                    <RadioGroupItem value="Monthly" id="d3" />
+                                                    <Label htmlFor="d3">شهري</Label>
+                                                </div>
+                                            </RadioGroup>
+                                        )}
+                                    />
+                                    {addForm.formState.errors.period && <p className="text-red-500 text-xs">{addForm.formState.errors.period.message}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>نوع التمرين</Label>
+                                    <Controller
+                                        name="classes"
+                                        control={addForm.control}
+                                        render={() => (
+                                            <div className="space-y-2">
+                                                 <div className="flex items-center space-x-2 space-x-reverse">
+                                                    <Checkbox id="c1"
+                                                        defaultChecked={addForm.getValues("classes").includes("Iron")}
+                                                        onCheckedChange={(checked) => {
+                                                          const currentClasses = addForm.getValues("classes") || [];
+                                                          const newClasses = checked
+                                                            ? [...currentClasses, "Iron"]
+                                                            : currentClasses.filter((c) => c !== "Iron");
+                                                          addForm.setValue("classes", newClasses, { shouldValidate: true });
+                                                        }}
+                                                    />
+                                                    <Label htmlFor="c1">حديد</Label>
+                                                 </div>
+                                                  <div className="flex items-center space-x-2 space-x-reverse">
+                                                     <Checkbox id="c2"
+                                                        defaultChecked={addForm.getValues("classes").includes("Fitness")}
+                                                        onCheckedChange={(checked) => {
+                                                          const currentClasses = addForm.getValues("classes") || [];
+                                                          const newClasses = checked
+                                                            ? [...currentClasses, "Fitness"]
+                                                            : currentClasses.filter((c) => c !== "Fitness");
+                                                          addForm.setValue("classes", newClasses, { shouldValidate: true });
+                                                        }}
+                                                     />
+                                                    <Label htmlFor="c2">لياقة</Label>
+                                                  </div>
+                                            </div>
+                                        )}
+                                    />
+                                     {addForm.formState.errors.classes && <p className="text-red-500 text-xs">{addForm.formState.errors.classes.message}</p>}
+                                </div>
+                            </div>
+
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="phone" className="text-right">الهاتف</Label>
-                          <Input id="phone" value={newMember.phone} onChange={e => setNewMember({...newMember, phone: e.target.value})} className="col-span-3" placeholder="مثال: 9665xxxxxxxx (اختياري)" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="type" className="text-right">الاشتراك</Label>
-                          <Select value={newMember.subscriptionType} onValueChange={v => setNewMember({...newMember, subscriptionType: v as SubscriptionType})}>
-                              <SelectTrigger className="col-span-3">
-                              <SelectValue placeholder="اختر نوع الاشتراك" />
-                              </SelectTrigger>
-                              <SelectContent>
-                              <SelectItem value="Daily Iron">يومي - حديد</SelectItem>
-                              <SelectItem value="Daily Fitness">يومي - لياقة</SelectItem>
-                              <SelectItem value="Weekly Iron">أسبوعي - حديد</SelectItem>
-                              <SelectItem value="Weekly Fitness">أسبوعي - لياقة</SelectItem>
-                              <SelectItem value="Monthly Iron">شهري - حديد</SelectItem>
-                              <SelectItem value="Monthly Fitness">شهري - لياقة</SelectItem>
-                              </SelectContent>
-                          </Select>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={() => setAddDialogOpen(false)} variant="outline">إلغاء</Button>
-                        <Button onClick={handleAddMember}>إضافة عضو</Button>
-                    </DialogFooter>
+                        <DialogFooter>
+                            <Button type="button" onClick={() => setAddDialogOpen(false)} variant="outline">إلغاء</Button>
+                            <Button type="submit" disabled={addForm.formState.isSubmitting}>إضافة عضو</Button>
+                        </DialogFooter>
+                    </form>
                     </DialogContent>
                 </Dialog>
             </div>
@@ -466,35 +563,92 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
       <Dialog open={isRenewDialogOpen} onOpenChange={setRenewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تجديد اشتراك {renewalInfo.member?.name}</DialogTitle>
+            <DialogTitle>تجديد اشتراك {renewalMember?.name}</DialogTitle>
             <DialogDescription>
               اختر نوع الاشتراك الجديد لتجديد العضوية. سيتم تعيين تاريخ البدء إلى اليوم.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="renew-type" className="text-right">الاشتراك الجديد</Label>
-              <Select value={renewalInfo.type} onValueChange={v => setRenewalInfo(prev => ({...prev, type: v as SubscriptionType}))}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="اختر نوع الاشتراك" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Daily Iron">يومي - حديد</SelectItem>
-                  <SelectItem value="Daily Fitness">يومي - لياقة</SelectItem>
-                  <SelectItem value="Weekly Iron">أسبوعي - حديد</SelectItem>
-                  <SelectItem value="Weekly Fitness">أسبوعي - لياقة</SelectItem>
-                  <SelectItem value="Monthly Iron">شهري - حديد</SelectItem>
-                  <SelectItem value="Monthly Fitness">شهري - لياقة</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setRenewDialogOpen(false)} variant="outline">إلغاء</Button>
-            <Button onClick={handleRenewSubscription}>تجديد</Button>
-          </DialogFooter>
+           <form onSubmit={renewForm.handleSubmit(handleRenewSubscription)}>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                        <div className="space-y-2">
+                             <Label>الفترة الزمنية</Label>
+                             <Controller
+                                control={renewForm.control}
+                                name="period"
+                                render={({ field }) => (
+                                     <RadioGroup
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                        className="space-y-2"
+                                    >
+                                        <div className="flex items-center space-x-2 space-x-reverse">
+                                            <RadioGroupItem value="Daily" id="r-d1" />
+                                            <Label htmlFor="r-d1">يومي</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2 space-x-reverse">
+                                            <RadioGroupItem value="Weekly" id="r-d2" />
+                                            <Label htmlFor="r-d2">أسبوعي</Label>
+                                        </div>
+                                         <div className="flex items-center space-x-2 space-x-reverse">
+                                            <RadioGroupItem value="Monthly" id="r-d3" />
+                                            <Label htmlFor="r-d3">شهري</Label>
+                                        </div>
+                                    </RadioGroup>
+                                )}
+                            />
+                            {renewForm.formState.errors.period && <p className="text-red-500 text-xs">{renewForm.formState.errors.period.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>نوع التمرين</Label>
+                            <Controller
+                                name="classes"
+                                control={renewForm.control}
+                                render={() => (
+                                    <div className="space-y-2">
+                                         <div className="flex items-center space-x-2 space-x-reverse">
+                                            <Checkbox id="r-c1"
+                                                defaultChecked={renewForm.getValues("classes").includes("Iron")}
+                                                onCheckedChange={(checked) => {
+                                                  const currentClasses = renewForm.getValues("classes") || [];
+                                                  const newClasses = checked
+                                                    ? [...currentClasses, "Iron"]
+                                                    : currentClasses.filter((c) => c !== "Iron");
+                                                  renewForm.setValue("classes", newClasses, { shouldValidate: true });
+                                                }}
+                                            />
+                                            <Label htmlFor="r-c1">حديد</Label>
+                                         </div>
+                                          <div className="flex items-center space-x-2 space-x-reverse">
+                                             <Checkbox id="r-c2"
+                                                defaultChecked={renewForm.getValues("classes").includes("Fitness")}
+                                                onCheckedChange={(checked) => {
+                                                  const currentClasses = renewForm.getValues("classes") || [];
+                                                  const newClasses = checked
+                                                    ? [...currentClasses, "Fitness"]
+                                                    : currentClasses.filter((c) => c !== "Fitness");
+                                                  renewForm.setValue("classes", newClasses, { shouldValidate: true });
+                                                }}
+                                             />
+                                            <Label htmlFor="r-c2">لياقة</Label>
+                                          </div>
+                                    </div>
+                                )}
+                            />
+                             {renewForm.formState.errors.classes && <p className="text-red-500 text-xs">{renewForm.formState.errors.classes.message}</p>}
+                        </div>
+                    </div>
+
+                </div>
+                <DialogFooter>
+                    <Button type="button" onClick={() => setRenewDialogOpen(false)} variant="outline">إلغاء</Button>
+                    <Button type="submit" disabled={renewForm.formState.isSubmitting}>تجديد</Button>
+                </DialogFooter>
+            </form>
         </DialogContent>
       </Dialog>
     </>
   );
 }
+
+    
