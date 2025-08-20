@@ -15,25 +15,25 @@ export function useAuth(required = true) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubscriptionActive, setSubscriptionActive] = useState(true); // Assume active until checked
+  const [gymOwner, setGymOwner] = useState<any>(null); // Store gym owner data
 
   useEffect(() => {
     const checkAuthAndSubscription = async (currentUser: User) => {
       try {
-        // Check subscription status
         const ownerDocRef = doc(db, 'gymOwners', currentUser.uid);
         const ownerDoc = await getDoc(ownerDocRef);
 
         if (ownerDoc.exists()) {
           const data = ownerDoc.data();
-          const endDate = data.subscriptionEndDate.toDate();
-          if (new Date() > endDate) {
+          setGymOwner(data); // Store owner data
+          const endDate = data.subscriptionEndDate?.toDate();
+          if (endDate && new Date() > endDate) {
             setSubscriptionActive(false);
             toast({
               variant: 'destructive',
-              title: 'Subscription Expired',
-              description: 'Please renew your subscription to continue.',
+              title: 'انتهى الاشتراك',
+              description: 'يرجى تجديد اشتراكك للاستمرار.',
             });
-            // Log out the user and redirect
             await auth.signOut();
             router.push('/');
           } else {
@@ -41,19 +41,12 @@ export function useAuth(required = true) {
           }
         } else if (required) {
           // This case might happen if user exists in auth but not in gymOwners collection
-          setSubscriptionActive(false);
-          toast({
-            variant: 'destructive',
-            title: 'Account Error',
-            description: 'Could not find your subscription details.',
-          });
-          await auth.signOut();
-          router.push('/');
+          // which is possible during signup flow. Let's not kick them out immediately.
+          // The page logic should handle if gymOwner data is needed but missing.
+          console.warn("User exists in auth, but no gymOwner document found.");
         }
       } catch (e) {
         console.error("Error checking subscription:", e);
-        // It's possible to be offline, so we might not want to log out immediately.
-        // For now, let's assume the subscription is active to avoid locking out users with bad connections.
         setSubscriptionActive(true); 
       }
     };
@@ -68,5 +61,5 @@ export function useAuth(required = true) {
 
   }, [user, loading, required, router, toast]);
 
-  return { user, loading, error, isSubscriptionActive };
+  return { user, gymOwner, loading, error, isSubscriptionActive };
 }
