@@ -1,7 +1,8 @@
+
 "use client";
 
 import { AuthForm } from "@/components/auth-form";
-import { Dumbbell, Users, BarChart3, ShieldCheck, Zap, LogIn } from "lucide-react";
+import { Dumbbell, Users, BarChart3, ShieldCheck, Zap, LogIn, UserPlus } from "lucide-react";
 import Image from 'next/image';
 import {
   Accordion,
@@ -17,6 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const features = [
@@ -62,6 +65,9 @@ const faqs = [
 ]
 
 export default function Home() {
+  const [isAuthOpen, setAuthOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -70,22 +76,28 @@ export default function Home() {
                 <Dumbbell className="h-6 w-6 text-primary" />
                 <span className="font-bold text-lg">جيمكو</span>
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
+            <div className="flex items-center gap-2">
+                 <Button variant="ghost" onClick={() => { setActiveTab('login'); setAuthOpen(true); }}>
                     <LogIn className="ml-2 h-4 w-4" />
                     تسجيل الدخول
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle className="sr-only">تسجيل الدخول أو إنشاء حساب</DialogTitle>
-                  </DialogHeader>
-                  <AuthForm />
-              </DialogContent>
-            </Dialog>
+                <Button onClick={() => { setActiveTab('signup'); setAuthOpen(true); }}>
+                    <UserPlus className="ml-2 h-4 w-4" />
+                    إنشاء حساب
+                </Button>
+            </div>
         </div>
       </header>
+
+      <Dialog open={isAuthOpen} onOpenChange={setAuthOpen}>
+          <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="sr-only">Auth</DialogTitle>
+                </DialogHeader>
+                <AuthForm initialTab={activeTab} />
+          </DialogContent>
+      </Dialog>
+      
       <main className="flex-1">
         {/* Hero Section */}
         <section id="hero" className="w-full py-20 md:py-32 lg:py-40">
