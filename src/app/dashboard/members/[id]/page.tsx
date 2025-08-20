@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { ArrowRight, User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft } from 'lucide-react';
+import { ArrowRight, User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorDisplay } from '@/components/error-display';
@@ -17,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { generateMealPlan, type MealPlanOutput } from '@/ai/flows/meal-plan-flow';
+import { useToast } from '@/hooks/use-toast';
 
 type MemberData = {
   id: string;
@@ -59,15 +61,32 @@ const translateSubscriptionType = (type: string): string => {
   return `${translatedPeriod} - ${translatedClasses}`;
 };
 
+const MealCard = ({ icon, title, meal, description, calories }: { icon: React.ReactNode, title: string, meal: string, description: string, calories: number }) => (
+    <div className="flex items-start gap-4">
+        <div className="bg-primary/10 p-3 rounded-full">
+            {icon}
+        </div>
+        <div>
+            <p className="font-bold text-base">{title}: <span className="font-normal">{meal}</span></p>
+            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-sm font-semibold text-primary">{calories} سعر حراري</p>
+        </div>
+    </div>
+);
+
 
 export default function MemberProfilePage() {
   const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const { id } = params;
   const [member, setMember] = useState<MemberData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [mealPlan, setMealPlan] = useState<MealPlanOutput | null>(null);
+
 
   useEffect(() => {
     if (!user || !id) return;
@@ -112,6 +131,25 @@ export default function MemberProfilePage() {
 
     fetchMember();
   }, [user, id]);
+
+  const handleGeneratePlan = async () => {
+    if (!member?.dailyCalories) {
+        toast({ variant: "destructive", title: "خطأ", description: "لا يمكن إنشاء خطة بدون تحديد السعرات الحرارية للعضو."});
+        return;
+    }
+    setGeneratingPlan(true);
+    setMealPlan(null);
+    try {
+        const plan = await generateMealPlan({ calories: member.dailyCalories });
+        setMealPlan(plan);
+    } catch (e) {
+        console.error("Error generating meal plan:", e);
+        toast({ variant: "destructive", title: "فشل إنشاء الخطة", description: "حدث خطأ أثناء التحدث مع الذكاء الاصطناعي. يرجى المحاولة مرة أخرى." });
+    } finally {
+        setGeneratingPlan(false);
+    }
+  }
+
 
   if (loading) {
     return (
@@ -202,6 +240,87 @@ export default function MemberProfilePage() {
                         </div>
                     ))}
                 </CardContent>
+            </Card>
+
+             {/* AI Meal Plan Card */}
+            <Card className="lg:col-span-3">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                         <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <BrainCircuit className="h-6 w-6 text-primary" />
+                                خطة غذائية مقترحة بالذكاء الاصطناعي
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground mt-2">
+                                احصل على خطة غذائية مخصصة بناءً على السعرات الحرارية للمستخدم.
+                            </p>
+                        </div>
+                        <Button onClick={handleGeneratePlan} disabled={generatingPlan}>
+                            {generatingPlan ? (
+                                <>
+                                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                                    جاري الإنشاء...
+                                </>
+                            ) : (
+                                 <>
+                                    <Sparkles className="ml-2 h-4 w-4" />
+                                    إنشاء خطة جديدة
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </CardHeader>
+                {(generatingPlan || mealPlan) && (
+                     <CardContent>
+                        {generatingPlan && (
+                            <div className="space-y-4">
+                               <Skeleton className="h-16 w-full" />
+                               <Skeleton className="h-16 w-full" />
+                               <Skeleton className="h-16 w-full" />
+                            </div>
+                        )}
+                        {mealPlan && (
+                            <div className="space-y-6 pt-4 border-t">
+                                 <MealCard 
+                                    icon={<Sandwich className="w-6 h-6 text-primary" />}
+                                    title="الإفطار"
+                                    meal={mealPlan.breakfast.meal}
+                                    description={mealPlan.breakfast.description}
+                                    calories={mealPlan.breakfast.calories}
+                                />
+                                <MealCard 
+                                    icon={<Soup className="w-6 h-6 text-primary" />}
+                                    title="الغداء"
+                                    meal={mealPlan.lunch.meal}
+                                    description={mealPlan.lunch.description}
+                                    calories={mealPlan.lunch.calories}
+                                />
+                                <MealCard 
+                                    icon={<Salad className="w-6 h-6 text-primary" />}
+                                    title="العشاء"
+                                    meal={mealPlan.dinner.meal}
+                                    description={mealPlan.dinner.description}
+                                    calories={mealPlan.dinner.calories}
+                                />
+                                {mealPlan.snacks.map((snack, index) => (
+                                    <MealCard 
+                                        key={index}
+                                        icon={<Apple className="w-6 h-6 text-primary" />}
+                                        title={`وجبة خفيفة ${index + 1}`}
+                                        meal={snack.meal}
+                                        description={snack.description}
+                                        calories={snack.calories}
+                                    />
+                                ))}
+
+                                <div className="text-center pt-4 border-t mt-6">
+                                    <p className="text-lg font-bold">إجمالي السعرات الحرارية المقترحة:</p>
+                                    <p className="text-2xl font-bold text-primary">{mealPlan.totalCalories} سعر حراري</p>
+                                </div>
+                            </div>
+                        )}
+                     </CardContent>
+                )}
             </Card>
         </div>
       </div>
