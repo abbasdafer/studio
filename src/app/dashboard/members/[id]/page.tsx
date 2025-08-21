@@ -79,10 +79,10 @@ const MealCard = ({ icon, title, meal, description, calories }: { icon: React.Re
     </Card>
 );
 
-const InfoPill = ({ icon, label, value }: { icon: React.ElementType, label: string, value: string | number | undefined }) => (
+const InfoPill = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number | undefined }) => (
     <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
         <div className="bg-primary/10 p-3 rounded-full">
-            <icon className="h-6 w-6 text-primary" />
+            <Icon className="h-6 w-6 text-primary" />
         </div>
         <div>
             <p className="text-sm text-muted-foreground">{label}</p>
