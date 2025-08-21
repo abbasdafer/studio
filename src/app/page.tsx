@@ -2,7 +2,7 @@
 "use client";
 
 import { AuthForm } from "@/components/auth-form";
-import { Dumbbell, Users, BarChart3, ShieldCheck, Zap, LogIn, UserPlus, Scale, BrainCircuit } from "lucide-react";
+import { Dumbbell, Users, BarChart3, ShieldCheck, Zap, LogIn, UserPlus, Scale, BrainCircuit, MonitorSmartphone } from "lucide-react";
 import Image from 'next/image';
 import {
   Accordion,
@@ -47,8 +47,8 @@ const features = [
 
 const faqs = [
     {
-        question: "هل بياناتي آمنة؟",
-        answer: "بالتأكيد. نحن نستخدم Firebase من Google، مما يعني أن جميع بياناتك مخزنة ومحمية على واحدة من أكثر البنى التحتية أمانًا في العالم."
+        question: "هل يمكنني استخدام النظام على أي جهاز؟",
+        answer: "بالتأكيد. تم تصميم التطبيق ليعمل بسلاسة على أي متصفح ويب، سواء كنت تستخدم جهاز كمبيوتر مكتبي في مكتبك أو هاتفك الذكي أثناء تنقلك في صالة الألعاب الرياضية."
     },
     {
         question: "كيف تعمل ميزة إنشاء الخطط الغذائية؟",
