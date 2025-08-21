@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace } from 'lucide-react';
+import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace, Copy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorDisplay } from '@/components/error-display';
@@ -178,7 +178,44 @@ export default function MemberProfilePage() {
     } finally {
         setGeneratingPlan(false);
     }
-  }
+  };
+
+  const handleCopyPlan = () => {
+    if (!mealPlan) return;
+
+    const formatMeal = (title: string, meal: { meal: string, description: string, calories: number, alternatives: string }) => {
+        return `
+--- ${title} ---
+- الوجبة: ${meal.meal} (${meal.calories} سعر حراري)
+- الوصف: ${meal.description}
+- بدائل: ${meal.alternatives}
+`;
+    };
+    
+    const formatSnacks = (snacks: Array<{ meal: string, description: string, calories: number, alternatives: string }>) => {
+        return snacks.map((snack, index) => formatMeal(`وجبة خفيفة ${index + 1}`, snack)).join('');
+    };
+
+    const planText = `
+*${mealPlan.planTitle}*
+
+${formatMeal('الفطور', mealPlan.breakfast)}
+${formatMeal('الغداء', mealPlan.lunch)}
+${formatMeal('العشاء', mealPlan.dinner)}
+${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
+---
+*إجمالي السعرات الحرارية: ${mealPlan.totalCalories.toLocaleString()} سعر حراري*
+`;
+    
+    navigator.clipboard.writeText(planText.trim())
+        .then(() => {
+            toast({ title: "تم النسخ بنجاح", description: "تم نسخ الخطة الغذائية إلى الحافظة." });
+        })
+        .catch(err => {
+            console.error('Failed to copy text: ', err);
+            toast({ variant: "destructive", title: "فشل النسخ", description: "لم نتمكن من نسخ الخطة." });
+        });
+  };
 
 
   if (loading) {
@@ -257,7 +294,7 @@ export default function MemberProfilePage() {
                          <InfoPill icon={Calendar} label="العمر" value={`${member.age} سنة`} />
                          <InfoPill icon={Weight} label="الوزن" value={`${member.weight} كجم`} />
                          <InfoPill icon={Ruler} label="الطول" value={`${member.height} سم`} />
-                         <InfoPill icon={Flame} label="السعرات (BMR)" value={`${member.dailyCalories} سعر حراري`} />
+                         <InfoPill icon={Flame} label="السعرات (BMR)" value={`${member.dailyCalories?.toLocaleString()} سعر حراري`} />
                     </CardContent>
                 </Card>
             </div>
@@ -357,9 +394,15 @@ export default function MemberProfilePage() {
 
                             <Separator className="my-6" />
 
-                            <div className="text-center p-4 bg-muted rounded-lg">
-                                <p className="text-lg font-bold">إجمالي السعرات الحرارية المقترحة:</p>
-                                <p className="text-2xl font-bold text-primary">{mealPlan.totalCalories.toLocaleString()} سعر حراري</p>
+                            <div className="flex flex-col sm:flex-row items-center justify-center text-center gap-4 p-4 bg-muted rounded-lg">
+                                <div className='flex-1'>
+                                    <p className="text-lg font-bold">إجمالي السعرات الحرارية المقترحة:</p>
+                                    <p className="text-2xl font-bold text-primary">{mealPlan.totalCalories.toLocaleString()} سعر حراري</p>
+                                </div>
+                                <Button onClick={handleCopyPlan} variant="outline" className="w-full sm:w-auto">
+                                    <Copy className="ml-2 h-4 w-4" />
+                                    نسخ الخطة
+                                </Button>
                             </div>
                         </div>
                     ) : (
