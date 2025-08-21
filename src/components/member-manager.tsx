@@ -506,11 +506,9 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead><User className="inline-block ml-2 h-4 w-4" />الاسم</TableHead>
-                    <TableHead><Phone className="inline-block ml-2 h-4 w-4" />الهاتف</TableHead>
                     <TableHead>الاشتراك</TableHead>
                     <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ الانتهاء</TableHead>
                     <TableHead>الحالة</TableHead>
-                     <TableHead><Flame className="inline-block ml-2 h-4 w-4" />السعرات (BMR)</TableHead>
                     <TableHead>
                       <span className="sr-only">الإجراءات</span>
                     </TableHead>
@@ -519,7 +517,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                 <TableBody>
                   {filteredMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={5} className="h-24 text-center">
                         {searchQuery ? 'لا يوجد أعضاء يطابقون بحثك.' : 'لا يوجد أعضاء بعد. انقر على "إضافة عضو" للبدء.'}
                       </TableCell>
                     </TableRow>
@@ -531,19 +529,11 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                           {member.name}
                         </Link>
                       </TableCell>
-                      <TableCell>
-                        {member.phone ? (
-                          <span className="text-muted-foreground" dir="ltr">{member.phone}</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground/50">لا يوجد</span>
-                        )}
-                      </TableCell>
                       <TableCell>{translateSubscriptionType(member.subscriptionType)}</TableCell>
                       <TableCell>{format(member.endDate, "PPP", { locale: arSA })}</TableCell>
                       <TableCell>
                         <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
                       </TableCell>
-                       <TableCell>{member.dailyCalories || 'N/A'}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -624,12 +614,6 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                          <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-xs w-fit')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
                         
                          <div className="text-sm text-muted-foreground space-y-2">
-                           {member.phone && (
-                            <div className="flex items-center gap-2">
-                                <Phone className="h-4 w-4" />
-                                <span dir="ltr">{member.phone}</span>
-                            </div>
-                           )}
                            <div className="flex items-center gap-2">
                                 <User className="h-4 w-4" />
                                 <span>{translateSubscriptionType(member.subscriptionType)}</span>
@@ -637,10 +621,6 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                             <div className="flex items-center gap-2">
                                 <CalendarIcon className="h-4 w-4" />
                                 <span>ينتهي في: {format(member.endDate, "PPP", { locale: arSA })}</span>
-                            </div>
-                             <div className="flex items-center gap-2">
-                                <Flame className="h-4 w-4" />
-                                <span>السعرات: {member.dailyCalories || 'N/A'}</span>
                             </div>
                          </div>
                          
@@ -726,3 +706,5 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     </>
   );
 }
+
+    
