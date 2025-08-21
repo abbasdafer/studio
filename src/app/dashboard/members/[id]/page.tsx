@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace, Copy, Edit } from 'lucide-react';
+import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace, Copy, Edit, Share2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorDisplay } from '@/components/error-display';
@@ -64,6 +64,7 @@ type MemberData = {
   height?: number;
   gender?: "male" | "female";
   dailyCalories?: number;
+  mealPlan?: MealPlanOutput | null;
 };
 
 const editMemberSchema = z.object({
@@ -195,6 +196,9 @@ export default function MemberProfilePage() {
         } as MemberData;
 
         setMember(memberData);
+        if(memberData.mealPlan) {
+            setMealPlan(memberData.mealPlan);
+        }
         form.reset({
             name: memberData.name,
             phone: memberData.phone,
@@ -247,6 +251,12 @@ export default function MemberProfilePage() {
     try {
         const plan = await generateMealPlan({ calories: member.dailyCalories, goal });
         setMealPlan(plan);
+        // Save the generated plan to Firestore
+        if(member) {
+            const memberRef = doc(db, 'members', member.id);
+            await updateDoc(memberRef, { mealPlan: plan });
+            setMember(prev => prev ? { ...prev, mealPlan: plan } : null);
+        }
     } catch (e) {
         console.error("Error generating meal plan:", e);
         toast({ variant: "destructive", title: "فشل إنشاء الخطة", description: "حدث خطأ أثناء التحدث مع الذكاء الاصطناعي. يرجى المحاولة مرة أخرى." });
@@ -289,6 +299,19 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
         .catch(err => {
             console.error('Failed to copy text: ', err);
             toast({ variant: "destructive", title: "فشل النسخ", description: "لم نتمكن من نسخ الخطة." });
+        });
+  };
+
+  const handleShareProfile = () => {
+    if (!member) return;
+    const publicUrl = `${window.location.origin}/public/member/${member.id}`;
+    navigator.clipboard.writeText(publicUrl)
+        .then(() => {
+            toast({ title: "تم نسخ الرابط", description: "يمكنك الآن مشاركة ملف العضو العام." });
+        })
+        .catch(err => {
+            console.error('Failed to copy URL: ', err);
+            toast({ variant: "destructive", title: "فشل النسخ", description: "لم نتمكن من نسخ الرابط." });
         });
   };
 
@@ -338,7 +361,7 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
         </Button>
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-bold">{member.name}</h1>
                  <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
                     <DialogTrigger asChild>
@@ -420,6 +443,9 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                         </Form>
                     </DialogContent>
                 </Dialog>
+                <Button variant="outline" size="icon" onClick={handleShareProfile}>
+                    <Share2 className="h-4 w-4" />
+                </Button>
             </div>
           <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-base w-fit')}>
             {member.status === "Active" ? "الاشتراك فعال" : "الاشتراك منتهي"}
@@ -579,3 +605,6 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
   );
 }
 
+
+
+    
