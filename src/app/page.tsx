@@ -2,7 +2,7 @@
 "use client";
 
 import { AuthForm } from "@/components/auth-form";
-import { Dumbbell, Users, BarChart3, ShieldCheck, Zap, LogIn, UserPlus } from "lucide-react";
+import { Dumbbell, Users, BarChart3, ShieldCheck, Zap, LogIn, UserPlus, Scale, BrainCircuit } from "lucide-react";
 import Image from 'next/image';
 import {
   Accordion,
@@ -33,15 +33,15 @@ const features = [
     title: "تتبع الأرباح بذكاء",
     description: "شاهد إيراداتك تنمو مع لوحة تحكم تعرض لك الأرباح الشهرية والإجمالية.",
   },
-  {
-    icon: <Zap className="h-10 w-10 text-primary" />,
-    title: "تذكيرات واتساب فورية",
-    description: "أرسل تذكيرات تجديد الاشتراك لأعضائك مباشرة عبر الواتساب بنقرة واحدة.",
+    {
+    icon: <Scale className="h-10 w-10 text-primary" />,
+    title: "ملفات شخصية متكاملة",
+    description: "سجل قياسات كل عضو (الوزن، الطول، العمر) واحصل على حساب تلقائي لسعراتهم الحرارية (BMR).",
   },
   {
-    icon: <ShieldCheck className="h-10 w-10 text-primary" />,
-    title: "آمن وموثوق",
-    description: "بياناتك وبيانات عملائك محمية بأحدث تقنيات الأمان من Firebase.",
+    icon: <BrainCircuit className="h-10 w-10 text-primary" />,
+    title: "خطط غذائية بالذكاء الاصطناعي",
+    description: "بضغطة زر، قم بإنشاء خطط غذائية مقترحة ومخصصة لكل متدرب بناءً على سعراتهم الحرارية.",
   }
 ]
 
@@ -51,16 +51,16 @@ const faqs = [
         answer: "بالتأكيد. نحن نستخدم Firebase من Google، مما يعني أن جميع بياناتك مخزنة ومحمية على واحدة من أكثر البنى التحتية أمانًا في العالم."
     },
     {
-        question: "هل يمكنني تجربة النظام قبل الاشتراك؟",
-        answer: "نعم! يمكنك استخدام رمز اشتراك صالح للوصول إلى جميع الميزات. يتيح لك هذا استكشاف النظام بالكامل لمعرفة ما إذا كان يناسب احتياجاتك."
-    },
-    {
-        question: "كيف يعمل نظام تذكيرات الواتساب؟",
-        answer: "ببساطة، عند انتهاء اشتراك عضو لديه رقم هاتف مسجل، يظهر زر بجانبه. عند النقر عليه، يتم فتح محادثة واتساب مع رسالة تذكير جاهزة للإرسال."
+        question: "كيف تعمل ميزة إنشاء الخطط الغذائية؟",
+        answer: "بعد تسجيل قياسات المتدرب (الجنس، العمر، الوزن، الطول)، يقوم النظام بحساب سعراته الحرارية. يمكنك بعدها استخدام هذه المعلومة لإنشاء خطة غذائية مقترحة بالذكاء الاصطناعي مخصصة له."
     },
     {
         question: "هل يمكنني تخصيص أسعار اشتراكاتي؟",
-        answer: "نعم، عند إنشاء حسابك لأول مرة، يمكنك تحديد أسعار مختلفة للاشتراكات اليومية والأسبوعية والشهرية، سواء للياقة أو الحديد."
+        answer: "نعم، عند إنشاء حسابك لأول مرة، يمكنك تحديد أسعار مختلفة للاشتراكات اليومية والأسبوعية والشهرية. يمكنك أيضاً تعديل هذه الأسعار لاحقًا من صفحة الإعدادات."
+    },
+    {
+        question: "هل يمكنني تجربة النظام قبل الاشتراك؟",
+        answer: "نعم! يمكنك استخدام رمز اشتراك صالح للوصول إلى جميع الميزات. يتيح لك هذا استكشاف النظام بالكامل لمعرفة ما إذا كان يناسب احتياجاتك."
     }
 ]
 
@@ -121,7 +121,7 @@ export default function Home() {
             <div className="container mx-auto px-4 md:px-6">
                 <div className="text-center max-w-2xl mx-auto">
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight">كل ما تحتاجه لإدارة ناديك</h2>
-                    <p className="mt-4 text-lg text-muted-foreground">من الأعضاء إلى الأرباح، كل شيء في نظام واحد سهل الاستخدام.</p>
+                    <p className="mt-4 text-lg text-muted-foreground">من الأعضاء إلى الأرباح والخطط الغذائية، كل شيء في نظام واحد ذكي.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
                     {features.map((feature, index) => (
