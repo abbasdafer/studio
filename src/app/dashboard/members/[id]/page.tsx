@@ -3,10 +3,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace, Copy } from 'lucide-react';
+import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace, Copy, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorDisplay } from '@/components/error-display';
@@ -28,7 +28,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 
 type MemberData = {
   id: string;
@@ -45,6 +65,25 @@ type MemberData = {
   gender?: "male" | "female";
   dailyCalories?: number;
 };
+
+const editMemberSchema = z.object({
+    name: z.string().min(1, { message: "اسم العضو مطلوب." }),
+    phone: z.string().optional(),
+    gender: z.enum(["male", "female"], { required_error: "يجب تحديد الجنس."}),
+    age: z.coerce.number().min(10, "يجب أن يكون العمر 10 سنوات على الأقل.").max(100, "يجب أن يكون العمر أقل من 100 سنة."),
+    weight: z.coerce.number().min(30, "يجب أن يكون الوزن 30 كجم على الأقل."),
+    height: z.coerce.number().min(100, "يجب أن يكون الطول 100 سم على الأقل."),
+});
+
+const calculateBMR = (gender: "male" | "female", weight: number, height: number, age: number): number => {
+  // Mifflin-St Jeor Equation
+  if (gender === "male") {
+    return Math.round(10 * weight + 6.25 * height - 5 * age + 5);
+  } else {
+    return Math.round(10 * weight + 6.25 * height - 5 * age - 161);
+  }
+};
+
 
 const translateSubscriptionType = (type: string): string => {
   if (!type) return type;
@@ -115,8 +154,12 @@ export default function MemberProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [mealPlan, setMealPlan] = useState<MealPlanOutput | null>(null);
 
+  const form = useForm<z.infer<typeof editMemberSchema>>({
+    resolver: zodResolver(editMemberSchema),
+  });
 
   useEffect(() => {
     if (!user || !id) return;
@@ -143,13 +186,23 @@ export default function MemberProfilePage() {
         const endDate = data.endDate.toDate();
         const status = new Date() > endDate ? 'Expired' : 'Active';
 
-        setMember({
+        const memberData = {
           id: memberDoc.id,
           ...data,
           startDate: data.startDate.toDate(),
           endDate: endDate,
           status: status,
-        } as MemberData);
+        } as MemberData;
+
+        setMember(memberData);
+        form.reset({
+            name: memberData.name,
+            phone: memberData.phone,
+            gender: memberData.gender,
+            age: memberData.age,
+            weight: memberData.weight,
+            height: memberData.height,
+        });
 
       } catch (e) {
         console.error('Error fetching member profile:', e);
@@ -160,7 +213,29 @@ export default function MemberProfilePage() {
     };
 
     fetchMember();
-  }, [user, id]);
+  }, [user, id, form]);
+
+  const handleUpdateMember = async (values: z.infer<typeof editMemberSchema>) => {
+    if (!member) return;
+
+    const dailyCalories = calculateBMR(values.gender, values.weight, values.height, values.age);
+    const updatedData = { ...values, dailyCalories };
+    
+    try {
+        const memberRef = doc(db, 'members', member.id);
+        await updateDoc(memberRef, updatedData);
+        
+        // Update local state to reflect changes instantly
+        setMember(prev => prev ? { ...prev, ...updatedData } : null);
+        
+        toast({ title: "تم التحديث بنجاح", description: `تم تحديث بيانات ${values.name}.` });
+        setEditDialogOpen(false);
+
+    } catch (e) {
+        console.error("Error updating member:", e);
+        toast({ variant: "destructive", title: "فشل التحديث", description: "حدث خطأ أثناء تحديث بيانات العضو." });
+    }
+  };
 
   const handleGeneratePlan = async (goal: MealPlanInput['goal']) => {
     if (!member?.dailyCalories) {
@@ -262,8 +337,90 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
             </Link>
         </Button>
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h1 className="text-3xl font-bold">{member.name}</h1>
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+                <h1 className="text-3xl font-bold">{member.name}</h1>
+                 <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="icon">
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>تعديل بيانات {member.name}</DialogTitle>
+                            <DialogDescription>
+                                قم بتحديث معلومات المتدرب هنا. سيتم تحديث السعرات الحرارية تلقائياً.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(handleUpdateMember)} className="space-y-4">
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={form.control} name="name" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الاسم الكامل</FormLabel>
+                                            <FormControl><Input placeholder="الاسم الكامل للعضو" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="phone" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الهاتف (اختياري)</FormLabel>
+                                            <FormControl><Input placeholder="+9665xxxxxxxx" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <FormField control={form.control} name="gender" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الجنس</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger><SelectValue placeholder="اختر الجنس" /></SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="male">ذكر</SelectItem>
+                                                        <SelectItem value="female">أنثى</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                     <FormField control={form.control} name="age" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>العمر</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                     <FormField control={form.control} name="weight" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الوزن (كجم)</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                     <FormField control={form.control} name="height" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الطول (سم)</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
+                                <DialogFooter className="pt-4">
+                                    <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>إلغاء</Button>
+                                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                                        {form.formState.isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                                        حفظ التغييرات
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            </div>
           <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-base w-fit')}>
             {member.status === "Active" ? "الاشتراك فعال" : "الاشتراك منتهي"}
           </Badge>

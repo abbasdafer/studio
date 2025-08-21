@@ -127,7 +127,7 @@ const calculateEndDate = (startDate: Date, type: SubscriptionType): Date => {
   return date;
 };
 
-const formatSubscriptionType = (period: SubscriptionPeriod, classes: SubscriptionClass[]): SubscriptionType => {
+const formatSubscriptionType = (period: SubscriptionPeriod, classes: string[]): SubscriptionType => {
     const classString = classes.sort().join(" & ");
     return `${period} ${classString}`;
 }
@@ -171,13 +171,13 @@ const SelectableCard = ({
     option: string;
     Icon: React.ElementType;
 }) => {
-    const isSelected = field.value?.includes(option);
+    const isSelected = field.value?.includes(option.id);
     return (
         <div
             onClick={() => {
                 const newValue = isSelected
-                    ? field.value?.filter((val: string) => val !== option)
-                    : [...(field.value || []), option];
+                    ? field.value?.filter((val: string) => val !== option.id)
+                    : [...(field.value || []), option.id];
                 field.onChange(newValue);
             }}
             className={cn(
@@ -191,7 +191,7 @@ const SelectableCard = ({
                 <CheckCircle className="absolute top-2 left-2 h-5 w-5 text-primary" />
             )}
             <Icon className={cn("h-8 w-8", isSelected ? 'text-primary' : 'text-muted-foreground')} />
-            <span className="font-medium text-sm">{option}</span>
+            <span className="font-medium text-sm">{option.label}</span>
         </div>
     );
 };
@@ -251,7 +251,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   }, [gymOwnerId, toast]);
 
   const handleAddMember = async (values: z.infer<typeof memberSchema>) => {
-    const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes as SubscriptionClass[]);
+    const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes);
     const startDate = new Date();
     const endDate = calculateEndDate(startDate, subscriptionType);
     const dailyCalories = calculateBMR(values.gender, values.weight, values.height, values.age);
@@ -298,7 +298,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const handleRenewSubscription = async (values: z.infer<typeof renewSchema>) => {
     if (!renewalMember) return;
     
-    const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes as SubscriptionClass[]);
+    const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes);
     const startDate = new Date();
     const endDate = calculateEndDate(startDate, subscriptionType);
     
@@ -470,7 +470,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                                             <FormLabel>نوع التمرين</FormLabel>
                                             <div className="grid grid-cols-2 gap-3 pt-2">
                                                 {classOptions.map((item) => (
-                                                    <SelectableCard key={item.id} field={field} option={item.label} Icon={item.icon} />
+                                                    <SelectableCard key={item.id} field={field} option={item} Icon={item.icon} />
                                                 ))}
                                             </div>
                                             <FormMessage />
@@ -707,4 +707,3 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   );
 }
 
-    
