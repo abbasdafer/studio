@@ -6,8 +6,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { ArrowRight, User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorDisplay } from '@/components/error-display';
 import type { DocumentData } from 'firebase/firestore';
@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { generateMealPlan, type MealPlanOutput } from '@/ai/flows/meal-plan-flow';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+
 
 type MemberData = {
   id: string;
@@ -62,14 +64,29 @@ const translateSubscriptionType = (type: string): string => {
 };
 
 const MealCard = ({ icon, title, meal, description, calories }: { icon: React.ReactNode, title: string, meal: string, description: string, calories: number }) => (
-    <div className="flex items-start gap-4">
+    <Card className="bg-background/50">
+        <CardHeader className="flex-row items-center gap-4 space-y-0 pb-4">
+            <div className="bg-primary/10 p-3 rounded-full">
+                {icon}
+            </div>
+            <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <p className="font-bold text-base">{meal}</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-2">{description}</p>
+            <p className="text-sm font-semibold text-primary">{calories.toLocaleString()} سعر حراري</p>
+        </CardContent>
+    </Card>
+);
+
+const InfoPill = ({ icon, label, value }: { icon: React.ElementType, label: string, value: string | number | undefined }) => (
+    <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
         <div className="bg-primary/10 p-3 rounded-full">
-            {icon}
+            <icon className="h-6 w-6 text-primary" />
         </div>
         <div>
-            <p className="font-bold text-base">{title}: <span className="font-normal">{meal}</span></p>
-            <p className="text-sm text-muted-foreground">{description}</p>
-            <p className="text-sm font-semibold text-primary">{calories} سعر حراري</p>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="font-semibold text-lg">{value || 'غير مسجل'}</p>
         </div>
     </div>
 );
@@ -78,7 +95,6 @@ const MealCard = ({ icon, title, meal, description, calories }: { icon: React.Re
 export default function MemberProfilePage() {
   const { user } = useAuth();
   const params = useParams();
-  const router = useRouter();
   const { toast } = useToast();
   const { id } = params;
   const [member, setMember] = useState<MemberData | null>(null);
@@ -153,10 +169,18 @@ export default function MemberProfilePage() {
 
   if (loading) {
     return (
-        <div className="container mx-auto p-4 md:p-8 space-y-6">
-            <Skeleton className="h-8 w-48" />
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Skeleton className="h-48 w-full" />
+        <div className="container mx-auto max-w-5xl px-4 md:px-8 py-6 space-y-6">
+            <Skeleton className="h-8 w-32" />
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-8 w-24" />
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
                 <Skeleton className="h-48 w-full" />
                 <Skeleton className="h-48 w-full" />
             </div>
@@ -182,14 +206,14 @@ export default function MemberProfilePage() {
   ]
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="container mx-auto max-w-5xl px-4 md:px-8 py-6">
         <Button asChild variant="outline" size="sm" className="mb-6">
             <Link href="/dashboard">
                 <ChevronLeft className="h-4 w-4 ml-1" />
                 العودة إلى قائمة الأعضاء
             </Link>
         </Button>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <h1 className="text-3xl font-bold">{member.name}</h1>
           <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-base w-fit')}>
@@ -197,65 +221,48 @@ export default function MemberProfilePage() {
           </Badge>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Subscription Card */}
-            <Card className="lg:col-span-3">
-                <CardHeader>
-                    <CardTitle>تفاصيل الاشتراك</CardTitle>
-                </CardHeader>
-                <CardContent className="grid sm:grid-cols-3 gap-4 text-center">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                        <Dumbbell className="h-6 w-6 mx-auto mb-2 text-primary" />
-                        <p className="text-sm text-muted-foreground">نوع الاشتراك</p>
-                        <p className="font-semibold">{translateSubscriptionType(member.subscriptionType)}</p>
-                    </div>
-                     <div className="p-4 bg-muted/50 rounded-lg">
-                        <Calendar className="h-6 w-6 mx-auto mb-2 text-primary" />
-                        <p className="text-sm text-muted-foreground">تاريخ البدء</p>
-                        <p className="font-semibold">{format(member.startDate, "PPP", { locale: arSA })}</p>
-                    </div>
-                     <div className="p-4 bg-muted/50 rounded-lg">
-                        <Calendar className="h-6 w-6 mx-auto mb-2 text-red-400" />
-                        <p className="text-sm text-muted-foreground">تاريخ الانتهاء</p>
-                        <p className="font-semibold">{format(member.endDate, "PPP", { locale: arSA })}</p>
-                    </div>
-                </CardContent>
-            </Card>
-
+        {/* Subscription Card */}
+        <Card>
+            <CardHeader>
+                <CardTitle>تفاصيل الاشتراك</CardTitle>
+            </CardHeader>
+            <CardContent className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <InfoPill icon={Dumbbell} label="نوع الاشتراك" value={translateSubscriptionType(member.subscriptionType)} />
+                <InfoPill icon={Calendar} label="تاريخ البدء" value={format(member.startDate, "PPP", { locale: arSA })} />
+                <InfoPill icon={Calendar} label="تاريخ الانتهاء" value={format(member.endDate, "PPP", { locale: arSA })} />
+            </CardContent>
+        </Card>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Profile Info Card */}
-             <Card className="lg:col-span-3">
+             <Card className="lg:col-span-1">
                 <CardHeader>
-                    <CardTitle>البيانات الشخصية والقياسات</CardTitle>
+                    <CardTitle>البيانات الشخصية</CardTitle>
                 </CardHeader>
-                <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {profileItems.map(item => (
-                        <div key={item.label} className="flex items-center gap-4">
-                            <div className="bg-primary/10 p-3 rounded-full">
-                                <item.icon className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-muted-foreground">{item.label}</p>
-                                <p className="font-semibold text-lg">{item.value}</p>
-                            </div>
-                        </div>
-                    ))}
+                <CardContent className="space-y-4">
+                     <InfoPill icon={Phone} label="رقم الهاتف" value={member.phone} />
+                     <InfoPill icon={User} label="الجنس" value={member.gender === 'male' ? 'ذكر' : 'أنثى'} />
+                     <InfoPill icon={Calendar} label="العمر" value={`${member.age} سنة`} />
+                     <InfoPill icon={Weight} label="الوزن" value={`${member.weight} كجم`} />
+                     <InfoPill icon={Ruler} label="الطول" value={`${member.height} سم`} />
+                     <InfoPill icon={Flame} label="السعرات (BMR)" value={`${member.dailyCalories} سعر حراري`} />
                 </CardContent>
             </Card>
 
              {/* AI Meal Plan Card */}
-            <Card className="lg:col-span-3">
+            <Card className="lg:col-span-2">
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                         <div>
+                         <div className="flex-1">
                             <CardTitle className="flex items-center gap-2">
                                 <BrainCircuit className="h-6 w-6 text-primary" />
                                 خطة غذائية مقترحة بالذكاء الاصطناعي
                             </CardTitle>
-                            <p className="text-sm text-muted-foreground mt-2">
+                            <CardDescription className="mt-2">
                                 احصل على خطة غذائية مخصصة بناءً على السعرات الحرارية للمستخدم.
-                            </p>
+                            </CardDescription>
                         </div>
-                        <Button onClick={handleGeneratePlan} disabled={generatingPlan}>
+                        <Button onClick={handleGeneratePlan} disabled={generatingPlan} className="w-full sm:w-auto">
                             {generatingPlan ? (
                                 <>
                                     <Loader2 className="ml-2 h-4 w-4 animate-spin" />
@@ -270,18 +277,16 @@ export default function MemberProfilePage() {
                         </Button>
                     </div>
                 </CardHeader>
-                {(generatingPlan || mealPlan) && (
-                     <CardContent>
-                        {generatingPlan && (
-                            <div className="space-y-4">
-                               <Skeleton className="h-16 w-full" />
-                               <Skeleton className="h-16 w-full" />
-                               <Skeleton className="h-16 w-full" />
-                            </div>
-                        )}
-                        {mealPlan && (
-                            <div className="space-y-6 pt-4 border-t">
-                                 <MealCard 
+                <CardContent>
+                    {generatingPlan && (
+                        <div className="space-y-4 pt-4">
+                           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+                        </div>
+                    )}
+                    {mealPlan ? (
+                        <div className="space-y-6 pt-6 border-t">
+                             <div className="grid md:grid-cols-2 gap-4">
+                                <MealCard 
                                     icon={<Sandwich className="w-6 h-6 text-primary" />}
                                     title="الإفطار"
                                     meal={mealPlan.breakfast.meal}
@@ -312,15 +317,24 @@ export default function MemberProfilePage() {
                                         calories={snack.calories}
                                     />
                                 ))}
-
-                                <div className="text-center pt-4 border-t mt-6">
-                                    <p className="text-lg font-bold">إجمالي السعرات الحرارية المقترحة:</p>
-                                    <p className="text-2xl font-bold text-primary">{mealPlan.totalCalories} سعر حراري</p>
-                                </div>
                             </div>
-                        )}
-                     </CardContent>
-                )}
+
+                            <Separator className="my-6" />
+
+                            <div className="text-center p-4 bg-muted rounded-lg">
+                                <p className="text-lg font-bold">إجمالي السعرات الحرارية المقترحة:</p>
+                                <p className="text-2xl font-bold text-primary">{mealPlan.totalCalories.toLocaleString()} سعر حراري</p>
+                            </div>
+                        </div>
+                    ) : (
+                        !generatingPlan && (
+                             <div className="text-center py-10 text-muted-foreground">
+                                <p>لم يتم إنشاء أي خطة بعد.</p>
+                                <p className="text-sm">انقر على زر "إنشاء خطة جديدة" للبدء.</p>
+                             </div>
+                        )
+                    )}
+                 </CardContent>
             </Card>
         </div>
       </div>
