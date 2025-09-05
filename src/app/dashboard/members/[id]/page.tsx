@@ -3,11 +3,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace, Copy, Edit, Share2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { User, Phone, Calendar, Dumbbell, Flame, Weight, Ruler, ChevronLeft, BrainCircuit, Loader2, Sparkles, Soup, Sandwich, Salad, Apple, ChevronDown, CheckCircle, Replace, Copy, Edit, Share2, Wallet, CreditCard, PiggyBank } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorDisplay } from '@/components/error-display';
 import type { DocumentData } from 'firebase/firestore';
@@ -55,6 +55,9 @@ type MemberData = {
   name: string;
   phone?: string;
   subscriptionType: string;
+  subscriptionPrice: number;
+  amountPaid: number;
+  debt: number;
   startDate: Date;
   endDate: Date;
   status: "Active" | "Expired";
@@ -75,6 +78,11 @@ const editMemberSchema = z.object({
     weight: z.coerce.number().min(30, "يجب أن يكون الوزن 30 كجم على الأقل."),
     height: z.coerce.number().min(100, "يجب أن يكون الطول 100 سم على الأقل."),
 });
+
+const payDebtSchema = z.object({
+    payment: z.coerce.number().positive("يجب أن يكون مبلغ الدفع أكبر من صفر."),
+});
+
 
 const calculateBMR = (gender: "male" | "female", weight: number, height: number, age: number): number => {
   // Mifflin-St Jeor Equation
@@ -156,10 +164,15 @@ export default function MemberProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isPayDebtDialogOpen, setPayDebtDialogOpen] = useState(false);
   const [mealPlan, setMealPlan] = useState<MealPlanOutput | null>(null);
 
-  const form = useForm<z.infer<typeof editMemberSchema>>({
+  const editForm = useForm<z.infer<typeof editMemberSchema>>({
     resolver: zodResolver(editMemberSchema),
+  });
+  
+  const payDebtForm = useForm<z.infer<typeof payDebtSchema>>({
+    resolver: zodResolver(payDebtSchema),
   });
 
   useEffect(() => {
@@ -193,13 +206,14 @@ export default function MemberProfilePage() {
           startDate: data.startDate.toDate(),
           endDate: endDate,
           status: status,
+          debt: (data.subscriptionPrice || 0) - (data.amountPaid || 0),
         } as MemberData;
 
         setMember(memberData);
         if(memberData.mealPlan) {
             setMealPlan(memberData.mealPlan);
         }
-        form.reset({
+        editForm.reset({
             name: memberData.name,
             phone: memberData.phone,
             gender: memberData.gender,
@@ -217,7 +231,7 @@ export default function MemberProfilePage() {
     };
 
     fetchMember();
-  }, [user, id, form]);
+  }, [user, id, editForm]);
 
   const handleUpdateMember = async (values: z.infer<typeof editMemberSchema>) => {
     if (!member) return;
@@ -238,6 +252,33 @@ export default function MemberProfilePage() {
     } catch (e) {
         console.error("Error updating member:", e);
         toast({ variant: "destructive", title: "فشل التحديث", description: "حدث خطأ أثناء تحديث بيانات العضو." });
+    }
+  };
+
+  const handlePayDebt = async (values: z.infer<typeof payDebtSchema>) => {
+    if (!member || member.debt <= 0) return;
+    
+    const paymentAmount = Math.min(values.payment, member.debt); // Can't pay more than the debt
+
+    try {
+      const memberRef = doc(db, 'members', member.id);
+      await updateDoc(memberRef, {
+        amountPaid: increment(paymentAmount)
+      });
+      
+      const newAmountPaid = member.amountPaid + paymentAmount;
+      const newDebt = member.subscriptionPrice - newAmountPaid;
+
+      // Update local state
+      setMember(prev => prev ? { ...prev, amountPaid: newAmountPaid, debt: newDebt } : null);
+      
+      toast({ title: "تم تسجيل الدفعة", description: `تم استلام ${paymentAmount.toLocaleString()} د.ع. الدين المتبقي: ${newDebt.toLocaleString()} د.ع.` });
+      setPayDebtDialogOpen(false);
+      payDebtForm.reset();
+
+    } catch (e) {
+      console.error("Error processing payment:", e);
+      toast({ variant: "destructive", title: "فشل تسجيل الدفعة", description: "حدث خطأ ما." });
     }
   };
 
@@ -376,26 +417,26 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                                 قم بتحديث معلومات المتدرب هنا. سيتم تحديث السعرات الحرارية تلقائياً.
                             </DialogDescription>
                         </DialogHeader>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(handleUpdateMember)} className="space-y-4">
+                        <Form {...editForm}>
+                            <form onSubmit={editForm.handleSubmit(handleUpdateMember)} className="space-y-4">
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField control={form.control} name="name" render={({ field }) => (
+                                    <FormField control={editForm.control} name="name" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>الاسم الكامل</FormLabel>
                                             <FormControl><Input placeholder="الاسم الكامل للعضو" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                    <FormField control={form.control} name="phone" render={({ field }) => (
+                                    <FormField control={editForm.control} name="phone" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>الهاتف (اختياري)</FormLabel>
-                                            <FormControl><Input placeholder="+9665xxxxxxxx" {...field} /></FormControl>
+                                            <FormControl><Input placeholder="+964..." {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
                                 </div>
                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <FormField control={form.control} name="gender" render={({ field }) => (
+                                    <FormField control={editForm.control} name="gender" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>الجنس</FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -410,21 +451,21 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                     <FormField control={form.control} name="age" render={({ field }) => (
+                                     <FormField control={editForm.control} name="age" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>العمر</FormLabel>
                                             <FormControl><Input type="number" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                     <FormField control={form.control} name="weight" render={({ field }) => (
+                                     <FormField control={editForm.control} name="weight" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>الوزن (كجم)</FormLabel>
                                             <FormControl><Input type="number" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                     <FormField control={form.control} name="height" render={({ field }) => (
+                                     <FormField control={editForm.control} name="height" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>الطول (سم)</FormLabel>
                                             <FormControl><Input type="number" {...field} /></FormControl>
@@ -434,8 +475,8 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                                 </div>
                                 <DialogFooter className="pt-4">
                                     <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>إلغاء</Button>
-                                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                                        {form.formState.isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                                    <Button type="submit" disabled={editForm.formState.isSubmitting}>
+                                        {editForm.formState.isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                                         حفظ التغييرات
                                     </Button>
                                 </DialogFooter>
@@ -464,6 +505,60 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                         <InfoPill icon={Calendar} label="تاريخ البدء" value={format(member.startDate, "PPP", { locale: arSA })} />
                         <InfoPill icon={Calendar} label="تاريخ الانتهاء" value={format(member.endDate, "PPP", { locale: arSA })} />
                     </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>الحالة المالية</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                         <InfoPill icon={CreditCard} label="سعر الاشتراك" value={`${member.subscriptionPrice.toLocaleString()} د.ع`} />
+                         <InfoPill icon={PiggyBank} label="المبلغ المدفوع" value={`${member.amountPaid.toLocaleString()} د.ع`} />
+                         <InfoPill icon={Wallet} label="الدين المتبقي" value={`${member.debt.toLocaleString()} د.ع`} />
+                    </CardContent>
+                    {member.debt > 0 && (
+                        <CardFooter>
+                            <Dialog open={isPayDebtDialogOpen} onOpenChange={setPayDebtDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button className="w-full">
+                                        <Wallet className="ml-2 h-4 w-4" />
+                                        تسجيل دفعة جديدة
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>تسجيل دفعة دين</DialogTitle>
+                                        <DialogDescription>
+                                            أدخل المبلغ الذي دفعه العضو الآن.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <Form {...payDebtForm}>
+                                        <form onSubmit={payDebtForm.handleSubmit(handlePayDebt)} className="space-y-4">
+                                            <FormField control={payDebtForm.control} name="payment" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>مبلغ الدفعة</FormLabel>
+                                                    <FormControl>
+                                                        <div className="relative">
+                                                            <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                                            <Input type="number" placeholder="0" className="pr-8" {...field} />
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                            <DialogFooter className="pt-4">
+                                                <Button type="button" variant="outline" onClick={() => setPayDebtDialogOpen(false)}>إلغاء</Button>
+                                                <Button type="submit" disabled={payDebtForm.formState.isSubmitting}>
+                                                    {payDebtForm.formState.isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                                                    حفظ الدفعة
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </Form>
+                                </DialogContent>
+                            </Dialog>
+                        </CardFooter>
+                    )}
                 </Card>
 
                 {/* Profile Info Card */}
@@ -604,7 +699,3 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
     </div>
   );
 }
-
-
-
-    

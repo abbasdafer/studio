@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare, Phone, Flame, Dumbbell, Activity, CheckCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, CalendarIcon, User, Search, RefreshCw, MessageSquare, Phone, Flame, Dumbbell, Activity, CheckCircle, CreditCard, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 
@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "./ui/separator";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { useAuth } from "@/hooks/use-auth";
 
 
 type SubscriptionPeriod = "Daily" | "Weekly" | "Monthly";
@@ -68,6 +69,9 @@ type Member = {
   name: string;
   phone?: string;
   subscriptionType: SubscriptionType;
+  subscriptionPrice: number;
+  amountPaid: number;
+  debt: number;
   startDate: Date;
   endDate: Date;
   status: "Active" | "Expired";
@@ -92,6 +96,7 @@ const memberSchema = z.object({
     age: z.coerce.number().min(10, "يجب أن يكون العمر 10 سنوات على الأقل.").max(100, "يجب أن يكون العمر أقل من 100 سنة."),
     weight: z.coerce.number().min(30, "يجب أن يكون الوزن 30 كجم على الأقل."),
     height: z.coerce.number().min(100, "يجب أن يكون الطول 100 سم على الأقل."),
+    amountPaid: z.coerce.number().min(0, "المبلغ المدفوع يجب أن يكون رقماً موجباً."),
 });
 
 const renewSchema = z.object({
@@ -101,6 +106,7 @@ const renewSchema = z.object({
     classes: z.array(z.string()).refine((value) => value.some((item) => item), {
         message: "يجب اختيار نوع تمرين واحد على الأقل.",
     }),
+    amountPaid: z.coerce.number().min(0, "المبلغ المدفوع يجب أن يكون رقماً موجباً."),
 });
 
 const calculateBMR = (gender: "male" | "female", weight: number, height: number, age: number): number => {
@@ -198,6 +204,7 @@ const SelectableCard = ({
 
 export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const { toast } = useToast();
+  const { gymOwner: initialGymOwner } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [isRenewDialogOpen, setRenewDialogOpen] = useState(false);
@@ -205,17 +212,47 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gymOwner, setGymOwner] = useState(initialGymOwner);
 
   const addForm = useForm<z.infer<typeof memberSchema>>({
     resolver: zodResolver(memberSchema),
-    defaultValues: { name: "", phone: "", period: "Monthly", classes: ["Iron"], age: 18, weight: 70, height: 170 },
+    defaultValues: { name: "", phone: "", period: "Monthly", classes: ["Iron"], age: 18, weight: 70, height: 170, amountPaid: 0 },
   });
 
   const renewForm = useForm<z.infer<typeof renewSchema>>({
     resolver: zodResolver(renewSchema),
-    defaultValues: { period: "Monthly", classes: ["Iron"] },
+    defaultValues: { period: "Monthly", classes: ["Iron"], amountPaid: 0 },
   });
 
+  const watchAddForm = addForm.watch();
+  const watchRenewForm = renewForm.watch();
+  
+  const getPrice = (period: string, classes: string[], pricing: any): number => {
+      if (!pricing) return 0;
+      const classKey = classes.includes("Iron") ? "Iron" : "Fitness";
+      const priceKey = `${period.toLowerCase()}${classKey}`;
+      return pricing[priceKey] || 0;
+  };
+  
+  const addSubscriptionPrice = useMemo(() => {
+    return getPrice(watchAddForm.period, watchAddForm.classes, gymOwner?.pricing);
+  }, [watchAddForm.period, watchAddForm.classes, gymOwner]);
+
+  const renewSubscriptionPrice = useMemo(() => {
+      if(!renewalMember) return 0;
+      return getPrice(watchRenewForm.period, watchRenewForm.classes, gymOwner?.pricing);
+  }, [watchRenewForm.period, watchRenewForm.classes, gymOwner, renewalMember]);
+
+
+  useEffect(() => {
+    if(!gymOwner && gymOwnerId) {
+        const fetchOwner = async () => {
+            const ownerDoc = await getDoc(doc(db, 'gymOwners', gymOwnerId));
+            if(ownerDoc.exists()) setGymOwner(ownerDoc.data());
+        }
+        fetchOwner();
+    }
+  }, [gymOwner, gymOwnerId]);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -235,6 +272,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                 startDate: data.startDate.toDate(),
                 endDate: endDate,
                 status: status,
+                debt: data.subscriptionPrice - data.amountPaid
             } as Member
         }).sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
         setMembers(membersList);
@@ -256,6 +294,8 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     const endDate = calculateEndDate(startDate, subscriptionType);
     const dailyCalories = calculateBMR(values.gender, values.weight, values.height, values.age);
 
+    const subscriptionPrice = getPrice(values.period, values.classes, gymOwner?.pricing);
+    
     const newMemberData = {
       name: values.name,
       phone: values.phone || "",
@@ -268,12 +308,18 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
       age: values.age,
       weight: values.weight,
       height: values.height,
-      dailyCalories: dailyCalories
+      dailyCalories: dailyCalories,
+      subscriptionPrice: subscriptionPrice,
+      amountPaid: values.amountPaid,
     };
 
     try {
         const docRef = await addDoc(collection(db, "members"), newMemberData);
-        const addedMember: Member = { id: docRef.id, ...newMemberData };
+        const addedMember: Member = { 
+            id: docRef.id, 
+            ...newMemberData,
+            debt: newMemberData.subscriptionPrice - newMemberData.amountPaid
+        };
         setMembers(prev => [addedMember, ...prev].sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
         toast({ title: 'نجاح', description: `تمت إضافة عضو جديد. السعرات الحرارية المحسوبة: ${dailyCalories}` });
         setAddDialogOpen(false);
@@ -301,6 +347,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     const subscriptionType = formatSubscriptionType(values.period as SubscriptionPeriod, values.classes);
     const startDate = new Date();
     const endDate = calculateEndDate(startDate, subscriptionType);
+    const subscriptionPrice = getPrice(values.period, values.classes, gymOwner?.pricing);
     
     try {
         const memberRef = doc(db, "members", renewalMember.id);
@@ -308,12 +355,14 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
             subscriptionType,
             startDate,
             endDate,
-            status: 'Active'
+            status: 'Active',
+            subscriptionPrice: subscriptionPrice,
+            amountPaid: values.amountPaid
         });
 
         setMembers(prevMembers => prevMembers.map(m => 
             m.id === renewalMember.id 
-            ? { ...m, subscriptionType, startDate, endDate, status: 'Active' }
+            ? { ...m, subscriptionType, startDate, endDate, status: 'Active', subscriptionPrice: subscriptionPrice, amountPaid: values.amountPaid, debt: subscriptionPrice - values.amountPaid }
             : m
         ).sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
 
@@ -341,6 +390,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
     renewForm.reset({
         period: "Monthly",
         classes: member.subscriptionType.includes("Iron") ? ["Iron"] : ["Fitness"],
+        amountPaid: 0,
     });
     setRenewDialogOpen(true);
   };
@@ -400,7 +450,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                                     <FormField control={addForm.control} name="phone" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>الهاتف (اختياري)</FormLabel>
-                                            <FormControl><Input placeholder="+9665xxxxxxxx" {...field} /></FormControl>
+                                            <FormControl><Input placeholder="+964..." {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
@@ -477,6 +527,24 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                                         </FormItem>
                                     )} />
                                 </div>
+                                <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-semibold text-muted-foreground">سعر الاشتراك:</span>
+                                        <span className="text-lg font-bold text-primary">{addSubscriptionPrice.toLocaleString()} د.ع</span>
+                                    </div>
+                                     <FormField control={addForm.control} name="amountPaid" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>المبلغ المدفوع</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </div>
                             </div>
                             <DialogFooter className="pt-6">
                                 <Button type="button" onClick={() => setAddDialogOpen(false)} variant="outline">إلغاء</Button>
@@ -509,6 +577,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                     <TableHead>الاشتراك</TableHead>
                     <TableHead><CalendarIcon className="inline-block ml-2 h-4 w-4" />تاريخ الانتهاء</TableHead>
                     <TableHead>الحالة</TableHead>
+                    <TableHead>الدين المتبقي</TableHead>
                     <TableHead>
                       <span className="sr-only">الإجراءات</span>
                     </TableHead>
@@ -517,7 +586,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                 <TableBody>
                   {filteredMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         {searchQuery ? 'لا يوجد أعضاء يطابقون بحثك.' : 'لا يوجد أعضاء بعد. انقر على "إضافة عضو" للبدء.'}
                       </TableCell>
                     </TableRow>
@@ -525,15 +594,21 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                   filteredMembers.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/dashboard/members/${member.id}`} className="hover:underline text-primary">
-                          {member.name}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                           <Link href={`/dashboard/members/${member.id}`} className="hover:underline text-primary">
+                             {member.name}
+                           </Link>
+                           {member.debt > 0 && <Wallet className="h-4 w-4 text-amber-500" title={`عليه دين: ${member.debt.toLocaleString()} د.ع`} />}
+                        </div>
                       </TableCell>
                       <TableCell>{translateSubscriptionType(member.subscriptionType)}</TableCell>
                       <TableCell>{format(member.endDate, "PPP", { locale: arSA })}</TableCell>
                       <TableCell>
                         <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
                       </TableCell>
+                       <TableCell className={cn(member.debt > 0 ? "text-amber-500 font-semibold" : "text-muted-foreground")}>
+                        {member.debt.toLocaleString()} د.ع
+                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -579,13 +654,16 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                  filteredMembers.map((member) => (
                    <Card key={member.id} className="relative">
                       <CardContent className="p-4 space-y-3">
-                         <div className="flex items-center justify-between">
-                            <Link href={`/dashboard/members/${member.id}`} className="font-bold text-lg hover:underline text-primary">
-                                {member.name}
-                            </Link>
+                         <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                                <Link href={`/dashboard/members/${member.id}`} className="font-bold text-lg hover:underline text-primary">
+                                    {member.name}
+                                </Link>
+                                <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-xs w-fit')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
+                            </div>
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 absolute top-2 left-2">
+                                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 shrink-0">
                                         <MoreHorizontal className="h-4 w-4" />
                                         <span className="sr-only">تبديل القائمة</span>
                                     </Button>
@@ -611,9 +689,7 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                             </DropdownMenu>
                          </div>
                          
-                         <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-xs w-fit')}>{member.status === "Active" ? "فعال" : "منتهي"}</Badge>
-                        
-                         <div className="text-sm text-muted-foreground space-y-2">
+                         <div className="text-sm text-muted-foreground space-y-2 pt-2">
                            <div className="flex items-center gap-2">
                                 <User className="h-4 w-4" />
                                 <span>{translateSubscriptionType(member.subscriptionType)}</span>
@@ -622,6 +698,12 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                                 <CalendarIcon className="h-4 w-4" />
                                 <span>ينتهي في: {format(member.endDate, "PPP", { locale: arSA })}</span>
                             </div>
+                             {member.debt > 0 && (
+                               <div className="flex items-center gap-2 text-amber-500 font-semibold">
+                                  <Wallet className="h-4 w-4" />
+                                  <span>الدين المتبقي: {member.debt.toLocaleString()} د.ع</span>
+                               </div>
+                            )}
                          </div>
                          
                       </CardContent>
@@ -695,7 +777,25 @@ export function MemberManager({ gymOwnerId }: { gymOwnerId: string }) {
                     </div>
 
                 </div>
-                <DialogFooter>
+                 <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                    <div className="flex justify-between items-center">
+                        <span className="font-semibold text-muted-foreground">سعر الاشتراك الجديد:</span>
+                        <span className="text-lg font-bold text-primary">{renewSubscriptionPrice.toLocaleString()} د.ع</span>
+                    </div>
+                    <FormField control={renewForm.control} name="amountPaid" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>المبلغ المدفوع</FormLabel>
+                            <FormControl>
+                                <div className="relative">
+                                    <span className="absolute right-2.5 top-2.5 text-sm text-muted-foreground">د.ع</span>
+                                    <Input type="number" placeholder="0" className="pr-8" {...field} />
+                                </div>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                <DialogFooter className="pt-6">
                     <Button type="button" onClick={() => setRenewDialogOpen(false)} variant="outline">إلغاء</Button>
                     <Button type="submit" disabled={renewForm.formState.isSubmitting}>تجديد</Button>
                 </DialogFooter>
