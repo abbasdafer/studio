@@ -31,8 +31,8 @@ export function useAuth(required = true) {
             setSubscriptionActive(false);
             toast({
               variant: 'destructive',
-              title: 'انتهى الاشتراك',
-              description: 'يرجى تجديد اشتراكك للاستمرار.',
+              title: 'انتهى اشتراكك',
+              description: 'تم تسجيل خروجك. يرجى التواصل معنا لتجديد اشتراكك.',
             });
             await auth.signOut();
             router.push('/');
