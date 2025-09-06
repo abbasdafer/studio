@@ -160,10 +160,14 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
     if (!(window as any).recaptchaVerifier) {
         (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
     }
-    return () => { 
+    return () => {
         const verifier = (window as any).recaptchaVerifier;
-        if (verifier) {
-            verifier.clear(); 
+        if (verifier && document.getElementById('recaptcha-container')?.hasChildNodes()) {
+          try {
+            verifier.clear();
+          } catch(e) {
+            console.warn("Recaptcha verifier cleanup failed.", e);
+          }
         }
     }
   }, []);
