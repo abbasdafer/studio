@@ -166,6 +166,12 @@ export default function MemberProfilePage() {
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isPayDebtDialogOpen, setPayDebtDialogOpen] = useState(false);
   const [mealPlan, setMealPlan] = useState<MealPlanOutput | null>(null);
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
+
+
+  useEffect(() => {
+    setCurrentDate(new Date());
+  }, []);
 
   const editForm = useForm<z.infer<typeof editMemberSchema>>({
     resolver: zodResolver(editMemberSchema),
@@ -198,28 +204,31 @@ export default function MemberProfilePage() {
         }
         
         const endDate = data.endDate.toDate();
-        const status = new Date() > endDate ? 'Expired' : 'Active';
-
+        // We will calculate status once we have the current date on the client
         const memberData = {
           id: memberDoc.id,
           ...data,
           startDate: data.startDate.toDate(),
           endDate: endDate,
-          status: status,
           debt: (data.subscriptionPrice || 0) - (data.amountPaid || 0),
-        } as MemberData;
+        } as Omit<MemberData, 'status'>;
 
-        setMember(memberData);
-        if(memberData.mealPlan) {
-            setMealPlan(memberData.mealPlan);
+
+        setMember({
+          ...memberData,
+          status: new Date() > endDate ? 'Expired' : 'Active',
+        });
+        
+        if(data.mealPlan) {
+            setMealPlan(data.mealPlan);
         }
         editForm.reset({
-            name: memberData.name,
-            phone: memberData.phone,
-            gender: memberData.gender,
-            age: memberData.age,
-            weight: memberData.weight,
-            height: memberData.height,
+            name: data.name,
+            phone: data.phone,
+            gender: data.gender,
+            age: data.age,
+            weight: data.weight,
+            height: data.height,
         });
 
       } catch (e) {
@@ -356,8 +365,12 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
         });
   };
 
+  const memberStatus = useMemo(() => {
+    if (!member || !currentDate) return "Expired";
+    return currentDate > member.endDate ? "Expired" : "Active";
+  }, [member, currentDate]);
 
-  if (loading) {
+  if (loading || !currentDate) {
     return (
         <div className="container mx-auto max-w-5xl px-4 md:px-8 py-6 space-y-6">
             <Skeleton className="h-8 w-32" />
@@ -488,8 +501,8 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                     <Share2 className="h-4 w-4" />
                 </Button>
             </div>
-          <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-base w-fit')}>
-            {member.status === "Active" ? "الاشتراك فعال" : "الاشتراك منتهي"}
+          <Badge variant={memberStatus === "Active" ? "default" : "destructive"} className={cn(memberStatus === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-base w-fit')}>
+            {memberStatus === "Active" ? "الاشتراك فعال" : "الاشتراك منتهي"}
           </Badge>
         </div>
         
@@ -611,7 +624,7 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                                 <DropdownMenuLabel>اختر الهدف من الخطة</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {planGoals.map((goal) => (
-                                    <DropdownMenuItem key={goal.key} onClick={() => handleGeneratePlan(goal.key)} disabled={generatingPlan}>
+                                    <DropdownMenuItem key={goal.key} onClick={() => handleGeneratePlan(goal.key as "bulking" | "weightLoss" | "maintenance")} disabled={generatingPlan}>
                                         {goal.label}
                                     </DropdownMenuItem>
                                 ))}
