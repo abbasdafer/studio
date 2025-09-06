@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -166,12 +166,6 @@ export default function MemberProfilePage() {
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isPayDebtDialogOpen, setPayDebtDialogOpen] = useState(false);
   const [mealPlan, setMealPlan] = useState<MealPlanOutput | null>(null);
-  const [currentDate, setCurrentDate] = useState<Date | null>(null);
-
-
-  useEffect(() => {
-    setCurrentDate(new Date());
-  }, []);
 
   const editForm = useForm<z.infer<typeof editMemberSchema>>({
     resolver: zodResolver(editMemberSchema),
@@ -204,20 +198,27 @@ export default function MemberProfilePage() {
         }
         
         const endDate = data.endDate.toDate();
-        // We will calculate status once we have the current date on the client
-        const memberData = {
+        const memberData: MemberData = {
           id: memberDoc.id,
-          ...data,
+          name: data.name,
+          phone: data.phone,
+          subscriptionType: data.subscriptionType,
+          subscriptionPrice: data.subscriptionPrice,
+          amountPaid: data.amountPaid,
           startDate: data.startDate.toDate(),
           endDate: endDate,
           debt: (data.subscriptionPrice || 0) - (data.amountPaid || 0),
-        } as Omit<MemberData, 'status'>;
-
-
-        setMember({
-          ...memberData,
           status: new Date() > endDate ? 'Expired' : 'Active',
-        });
+          gymOwnerId: data.gymOwnerId,
+          age: data.age,
+          weight: data.weight,
+          height: data.height,
+          gender: data.gender,
+          dailyCalories: data.dailyCalories,
+          mealPlan: data.mealPlan,
+        };
+
+        setMember(memberData);
         
         if(data.mealPlan) {
             setMealPlan(data.mealPlan);
@@ -365,12 +366,7 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
         });
   };
 
-  const memberStatus = useMemo(() => {
-    if (!member || !currentDate) return "Expired";
-    return currentDate > member.endDate ? "Expired" : "Active";
-  }, [member, currentDate]);
-
-  if (loading || !currentDate) {
+  if (loading) {
     return (
         <div className="container mx-auto max-w-5xl px-4 md:px-8 py-6 space-y-6">
             <Skeleton className="h-8 w-32" />
@@ -501,8 +497,8 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
                     <Share2 className="h-4 w-4" />
                 </Button>
             </div>
-          <Badge variant={memberStatus === "Active" ? "default" : "destructive"} className={cn(memberStatus === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-base w-fit')}>
-            {memberStatus === "Active" ? "الاشتراك فعال" : "الاشتراك منتهي"}
+          <Badge variant={member.status === "Active" ? "default" : "destructive"} className={cn(member.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80 text-base w-fit')}>
+            {member.status === "Active" ? "الاشتراك فعال" : "الاشتراك منتهي"}
           </Badge>
         </div>
         
@@ -712,3 +708,4 @@ ${mealPlan.snacks.length > 0 ? formatSnacks(mealPlan.snacks) : ''}
     </div>
   );
 }
+
