@@ -31,6 +31,8 @@ import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import type { PromoCode } from "./promo-code-manager";
 import { Separator } from "./ui/separator";
+import { Checkbox } from "./ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
 // Schemas
 const loginSchema = z.object({
@@ -49,7 +51,10 @@ const signupSchema = z.object({
     dailyIron: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
     weeklyIron: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
     monthlyIron: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
-  })
+  }),
+  terms: z.boolean().refine((val) => val === true, {
+    message: "يجب الموافقة على شروط الخدمة للمتابعة.",
+  }),
 });
 
 const otpSchema = z.object({
@@ -98,6 +103,43 @@ const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> 
     }
 };
 
+const TermsOfServiceDialog = () => (
+    <Dialog>
+        <DialogTrigger asChild>
+            <Button variant="link" className="p-0 h-auto font-normal text-primary">شروط وأحكام الخدمة</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+                <DialogTitle>شروط وأحكام الخدمة</DialogTitle>
+                <DialogDescription>
+                    آخر تحديث: {new Date().toLocaleDateString('ar-IQ')}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4 text-sm text-muted-foreground">
+                <p>مرحبًا بك في جيمكو. باستخدامك لخدماتنا، فإنك توافق على الالتزام بهذه الشروط. يرجى قراءتها بعناية.</p>
+                
+                <h4 className="font-bold text-foreground">1. الحسابات والاشتراكات</h4>
+                <p>يجب أن يكون عمرك 18 عامًا على الأقل لإنشاء حساب. أنت مسؤول عن الحفاظ على سرية كلمة المرور الخاصة بك وعن جميع الأنشطة التي تحدث تحت حسابك.</p>
+
+                <h4 className="font-bold text-foreground">2. سياسة الدفع والاسترداد</h4>
+                <p>جميع المدفوعات للاشتراكات غير قابلة للاسترداد. بمجرد إتمام عملية الدفع وتفعيل الاشتراك، لا يمكن استرجاع المبلغ تحت أي ظرف من الظروف.</p>
+                
+                <h4 className="font-bold text-foreground">3. الخدمة والتعويض</h4>
+                <p>نسعى لتقديم خدمة مستقرة وموثوقة. في حال حدوث خلل تقني كبير من جانبنا يؤثر بشكل جوهري على قدرتك على استخدام الخدمة، يحق لك المطالبة بتعويض مناسب. يتم تحديد طبيعة وقيمة التعويض (مثل تمديد فترة الاشتراك) حسب تقديرنا لكل حالة على حدة.</p>
+
+                <h4 className="font-bold text-foreground">4. استخدام البيانات</h4>
+                <p>أنت المسؤول الوحيد عن دقة وصحة البيانات التي تدخلها في النظام (بيانات الأعضاء، الاشتراكات، إلخ). نحن نستخدم هذه البيانات لتقديم الخدمة لك فقط ولا نشاركها مع أي طرف ثالث.</p>
+
+                <h4 className="font-bold text-foreground">5. إنهاء الخدمة</h4>
+                <p>نحتفظ بالحق في تعليق أو إنهاء حسابك في أي وقت إذا قمت بانتهاك هذه الشروط، دون أي إشعار مسبق أو استرداد للمبلغ المدفوع.</p>
+
+                 <h4 className="font-bold text-foreground">6. تحديث الشروط</h4>
+                <p>قد نقوم بتحديث هذه الشروط من وقت لآخر. سنقوم بإعلامك بأي تغييرات جوهرية. استمرارك في استخدام الخدمة بعد هذه التغييرات يعتبر موافقة منك على الشروط الجديدة.</p>
+            </div>
+        </DialogContent>
+    </Dialog>
+);
+
 // Component
 export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'signup' }) {
   const router = useRouter();
@@ -109,7 +151,7 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
 
   // Forms
   const loginForm = useForm<z.infer<typeof loginSchema>>({ resolver: zodResolver(loginSchema), defaultValues: { identifier: "", password: "" }});
-  const signupForm = useForm<z.infer<typeof signupSchema>>({ resolver: zodResolver(signupSchema), defaultValues: { identifier: "", password: "", promoCode: "", pricing: { dailyFitness: 0, weeklyFitness: 0, monthlyFitness: 0, dailyIron: 0, weeklyIron: 0, monthlyIron: 0 }}});
+  const signupForm = useForm<z.infer<typeof signupSchema>>({ resolver: zodResolver(signupSchema), defaultValues: { identifier: "", password: "", promoCode: "", pricing: { dailyFitness: 0, weeklyFitness: 0, monthlyFitness: 0, dailyIron: 0, weeklyIron: 0, monthlyIron: 0 }, terms: false }});
   const otpForm = useForm<z.infer<typeof otpSchema>>({ resolver: zodResolver(otpSchema), defaultValues: { otp: "" }});
 
 
@@ -350,7 +392,26 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
                     </div>
                   </div>
 
-                <Button type="submit" className="w-full !mt-6" disabled={loading}>
+                  <FormField
+                    control={signupForm.control}
+                    name="terms"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-x-reverse space-y-0 rounded-md border p-4 shadow-sm !mt-6">
+                            <FormControl>
+                                <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel className="font-normal">أوافق على <TermsOfServiceDialog /></FormLabel>
+                                <FormMessage />
+                            </div>
+                        </FormItem>
+                    )}
+                />
+
+                <Button type="submit" className="w-full !mt-6" disabled={loading || !signupForm.watch('terms')}>
                     {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                     إنشاء حساب جديد
                 </Button>
