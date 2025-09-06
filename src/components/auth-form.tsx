@@ -41,7 +41,7 @@ const loginSchema = z.object({
 const signupSchema = z.object({
   identifier: z.string().min(1, { message: "الرجاء إدخال بريد إلكتروني أو رقم هاتف." }),
   password: z.string().min(8, { message: "يجب أن لا تقل كلمة المرور عن 8 أحرف." }),
-  promoCode: z.string().min(1, { message: "رمز اشتراك صالح مطلوب." }),
+  promoCode: z.string().min(1, { message: "رمز الاشتراك أو الهدية مطلوب." }),
   pricing: z.object({
     dailyFitness: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
     weeklyFitness: z.coerce.number().min(0, "يجب أن يكون السعر موجبًا."),
@@ -61,10 +61,15 @@ const isEmail = (text: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
 const isPhoneNumber = (text: string) => /^\+?[1-9]\d{1,14}$/.test(text);
 
 type ValidationResult =
-  | { success: true; type: 'monthly' | 'yearly' }
+  | { success: true; type: 'monthly' | 'yearly' | '6-months' | 'gift' }
   | { success: false; error: string };
 
 const validateAndUsePromoCode = async (code: string): Promise<ValidationResult> => {
+    // Handle special "GIFT" code for 14-day trial
+    if (code.trim().toUpperCase() === "GIFT") {
+        return { success: true, type: 'gift' };
+    }
+
     const promoCodesRef = collection(db, "promoCodes");
     const q = query(promoCodesRef, where("code", "==", code.trim()));
     try {
@@ -110,10 +115,13 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
 
   // Recaptcha setup
   React.useEffect(() => {
-    (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
+    if (!(window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { 'size': 'invisible' });
+    }
     return () => { 
-        if ((window as any).recaptchaVerifier) {
-            (window as any).recaptchaVerifier.clear(); 
+        const verifier = (window as any).recaptchaVerifier;
+        if (verifier) {
+            verifier.clear(); 
         }
     }
   }, []);
@@ -193,7 +201,9 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
 
         const startDate = new Date();
         const endDate = new Date();
-        if (validationResult.type === 'monthly') endDate.setMonth(startDate.getMonth() + 1);
+        if (validationResult.type === 'gift') endDate.setDate(startDate.getDate() + 14);
+        else if (validationResult.type === 'monthly') endDate.setMonth(startDate.getMonth() + 1);
+        else if (validationResult.type === '6-months') endDate.setMonth(startDate.getMonth() + 6);
         else endDate.setFullYear(startDate.getFullYear() + 1);
 
         const userData = {
@@ -205,6 +215,7 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
             subscriptionEndDate: endDate,
             pricing: pricing,
             createdAt: serverTimestamp(),
+            usedPromoCodes: [promoCode.trim().toUpperCase()] // Store used codes
         };
 
         await setDoc(doc(db, "gymOwners", uid), userData);
@@ -214,8 +225,8 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
     } catch(error: any) {
         toast({ variant: "destructive", title: "فشل إكمال التسجيل", description: error.message || "حدث خطأ ما." });
         // Optional: Delete the created user if profile creation fails
-        // const user = auth.currentUser;
-        // if (user) await user.delete();
+        const user = auth.currentUser;
+        if (user) await user.delete().catch(e => console.error("Failed to clean up user:", e));
     }
   };
 
@@ -261,7 +272,7 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
                   <FormControl>
                     <div className="relative">
                         <Mail className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="e.g., mail@example.com or +966..." {...field} className="pr-8" />
+                        <Input placeholder="e.g., mail@example.com or +964..." {...field} className="pr-8" />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -315,8 +326,8 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
                   )} />
                   <FormField control={signupForm.control} name="promoCode" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>رمز الاشتراك</FormLabel>
-                      <FormControl><Input placeholder="أدخل الرمز الذي حصلت عليه" {...field} /></FormControl>
+                      <FormLabel>رمز الاشتراك أو الهدية</FormLabel>
+                      <FormControl><Input placeholder="أدخل الرمز (مثال: GIFT)" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -351,3 +362,5 @@ export function AuthForm({ initialTab = 'login' }: { initialTab?: 'login' | 'sig
     </>
   );
 }
+
+    

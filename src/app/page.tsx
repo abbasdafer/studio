@@ -2,7 +2,7 @@
 "use client";
 
 import { AuthForm } from "@/components/auth-form";
-import { Dumbbell, Users, BarChart3, ShieldCheck, Zap, LogIn, UserPlus, Scale, BrainCircuit, MonitorSmartphone } from "lucide-react";
+import { Dumbbell, Users, BarChart3, Wallet, Zap, LogIn, UserPlus, Scale, BrainCircuit, Share2, CheckCircle } from "lucide-react";
 import Image from 'next/image';
 import {
   Accordion,
@@ -20,29 +20,55 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 
 const features = [
   {
     icon: <Users className="h-10 w-10 text-primary" />,
-    title: "إدارة سهلة للأعضاء",
-    description: "أضف، جدد، وابحث عن أعضائك بسهولة. كل بياناتهم في مكان واحد آمن.",
+    title: "إدارة شاملة للأعضاء",
+    description: "أضف، جدد، وابحث عن أعضائك. كل بياناتهم وملفاتهم في مكان واحد آمن ومنظم.",
   },
   {
-    icon: <BarChart3 className="h-10 w-10 text-primary" />,
-    title: "تتبع الأرباح بذكاء",
-    description: "شاهد إيراداتك تنمو مع لوحة تحكم تعرض لك الأرباح الشهرية والإجمالية.",
+    icon: <Wallet className="h-10 w-10 text-primary" />,
+    title: "نظام متكامل للديون",
+    description: "سجل الاشتراكات كديون بسهولة، وتابع المبالغ المدفوعة والمتبقية لكل عضو.",
   },
     {
-    icon: <Scale className="h-10 w-10 text-primary" />,
-    title: "ملفات شخصية متكاملة",
-    description: "سجل قياسات كل عضو (الوزن، الطول، العمر) واحصل على حساب تلقائي لسعراتهم الحرارية (BMR).",
-  },
-  {
     icon: <BrainCircuit className="h-10 w-10 text-primary" />,
     title: "خطط غذائية بالذكاء الاصطناعي",
-    description: "بضغطة زر، قم بإنشاء خطط غذائية مقترحة ومخصصة لكل متدرب بناءً على سعراتهم الحرارية.",
+    description: "بضغطة زر، أنشئ خططًا غذائية عراقية مخصصة بناءً على قياسات وسعرات كل متدرب.",
+  },
+  {
+    icon: <Share2 className="h-10 w-10 text-primary" />,
+    title: "ملف تشاركي للمتدرب",
+    description: "شارك خطة المتدرب الغذائية ومعلومات اشتراكه عبر رابط خاص يفتحه على هاتفه مباشرة.",
   }
+]
+
+const pricingPlans = [
+    {
+        title: "الخطة الشهرية",
+        price: "49,000",
+        period: "شهرياً",
+        features: ["إدارة عدد غير محدود من الأعضاء", "خطط غذائية بالذكاء الاصطناعي", "نظام إدارة الديون", "ملفات تشاركية للأعضاء", "دعم فني عبر البريد الإلكتروني"],
+        isPopular: false,
+    },
+    {
+        title: "خطة الـ 6 أشهر",
+        price: "250,000",
+        period: "لكل 6 أشهر",
+        features: ["كل مميزات الخطة الشهرية", "عرض الأرباح والإحصائيات", "تخصيص أسعار الاشتراكات", "دعم فني ذو أولوية"],
+        isPopular: true,
+    },
+    {
+        title: "الخطة السنوية",
+        price: "499,000",
+        period: "سنوياً",
+        features: ["كل مميزات خطة الـ 6 أشهر", "الوصول المبكر للميزات الجديدة", "جلسة إعداد ومساعدة أولية"],
+        isPopular: false,
+    }
 ]
 
 const faqs = [
@@ -51,16 +77,16 @@ const faqs = [
         answer: "بالتأكيد. تم تصميم التطبيق ليعمل بسلاسة على أي متصفح ويب، سواء كنت تستخدم جهاز كمبيوتر مكتبي في مكتبك أو هاتفك الذكي أثناء تنقلك في صالة الألعاب الرياضية."
     },
     {
-        question: "كيف تعمل ميزة إنشاء الخطط الغذائية؟",
-        answer: "بعد تسجيل قياسات المتدرب (الجنس، العمر، الوزن، الطول)، يقوم النظام بحساب سعراته الحرارية. يمكنك بعدها استخدام هذه المعلومة لإنشاء خطة غذائية مقترحة بالذكاء الاصطناعي مخصصة له."
-    },
-    {
-        question: "هل يمكنني تخصيص أسعار اشتراكاتي؟",
-        answer: "نعم، عند إنشاء حسابك لأول مرة، يمكنك تحديد أسعار مختلفة للاشتراكات اليومية والأسبوعية والشهرية. يمكنك أيضاً تعديل هذه الأسعار لاحقًا من صفحة الإعدادات."
+        question: "كيف يعمل نظام الديون؟",
+        answer: "عند إضافة أو تجديد اشتراك أي عضو، يمكنك تسجيل المبلغ المدفوع كاملاً أو جزءًا منه. يقوم النظام تلقائيًا بحساب الدين المتبقي وتتبعه لك في ملف العضو."
     },
     {
         question: "هل يمكنني تجربة النظام قبل الاشتراك؟",
-        answer: "نعم! يمكنك استخدام رمز اشتراك صالح للوصول إلى جميع الميزات. يتيح لك هذا استكشاف النظام بالكامل لمعرفة ما إذا كان يناسب احتياجاتك."
+        answer: "نعم! يمكنك استخدام رمز الاشتراك 'GIFT' عند إنشاء حساب جديد للحصول على فترة تجريبية مجانية لمدة 14 يومًا لاستكشاف جميع الميزات."
+    },
+     {
+        question: "هل أحتاج إلى طابعة؟",
+        answer: "لا. يمكنك مشاركة الخطط الغذائية وملفات الأعضاء مباشرة مع المتدربين عبر رابط خاص يفتحونه على هواتفهم، مما يلغي الحاجة للطباعة الورقية."
     }
 ]
 
@@ -109,9 +135,13 @@ export default function Home() {
                   جيمكو
                 </h1>
               </div>
-              <p className="max-w-xl mx-auto text-lg md:text-xl text-muted-foreground mb-8">
-                الحل المتكامل لإدارة أعضاء ناديك الرياضي، والاشتراكات، والأرباح. ركز على رياضييك ودعنا نهتم بالباقي.
+              <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-8">
+                الحل الرقمي الأول في العراق لإدارة النوادي الرياضية. ركز على متدربيك ودعنا نهتم بالاشتراكات، الديون، والخطط الغذائية.
               </p>
+               <Button size="lg" onClick={() => { setActiveTab('signup'); setAuthOpen(true); }}>
+                    <Zap className="ml-2 h-5 w-5" />
+                    ابدأ الآن مع 14 يوم مجاني
+                </Button>
             </div>
           </div>
         </section>
@@ -120,8 +150,8 @@ export default function Home() {
         <section id="features" className="w-full py-20 md:py-28 lg:py-32 bg-card">
             <div className="container mx-auto px-4 md:px-6">
                 <div className="text-center max-w-2xl mx-auto">
-                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight">كل ما تحتاجه لإدارة ناديك</h2>
-                    <p className="mt-4 text-lg text-muted-foreground">من الأعضاء إلى الأرباح والخطط الغذائية، كل شيء في نظام واحد ذكي.</p>
+                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight">مصمم خصيصاً ليناسب احتياجات الجيم العراقي</h2>
+                    <p className="mt-4 text-lg text-muted-foreground">أدوات قوية وبسيطة لحل المشاكل اليومية التي تواجهها.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
                     {features.map((feature, index) => (
@@ -137,8 +167,45 @@ export default function Home() {
             </div>
         </section>
 
+         {/* Pricing Section */}
+        <section id="pricing" className="w-full py-20 md:py-28 lg:py-32 bg-background">
+            <div className="container mx-auto px-4 md:px-6">
+                 <div className="text-center max-w-2xl mx-auto">
+                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight">خطط أسعار مرنة</h2>
+                    <p className="mt-4 text-lg text-muted-foreground">اختر الخطة التي تناسب حجم وطموح ناديك. ابدأ مجاناً لمدة 14 يومًا باستخدام الرمز <code className="font-mono bg-muted text-primary px-1.5 py-0.5 rounded-md">GIFT</code>.</p>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-12 max-w-5xl mx-auto">
+                    {pricingPlans.map((plan, index) => (
+                        <Card key={index} className={cn("flex flex-col", plan.isPopular && "border-primary ring-2 ring-primary shadow-lg")}>
+                           {plan.isPopular && (
+                                <div className="bg-primary text-primary-foreground text-center py-1.5 text-sm font-semibold rounded-t-lg">الأكثر شيوعاً</div>
+                            )}
+                            <CardHeader className="text-center">
+                                <CardTitle className="text-2xl">{plan.title}</CardTitle>
+                                <CardDescription className="text-4xl font-bold text-foreground">{plan.price} <span className="text-lg font-medium text-muted-foreground">د.ع</span></CardDescription>
+                                <p className="text-muted-foreground">{plan.period}</p>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <ul className="space-y-3 text-right">
+                                    {plan.features.map((feature, fIndex) => (
+                                        <li key={fIndex} className="flex items-center gap-2">
+                                            <CheckCircle className="h-5 w-5 text-green-500" />
+                                            <span>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                            <div className="p-6 pt-0 mt-auto">
+                                <Button className="w-full" variant={plan.isPopular ? "default" : "outline"} onClick={() => { setActiveTab('signup'); setAuthOpen(true); }}>ابدأ الآن</Button>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        </section>
+
         {/* FAQ Section */}
-        <section id="faq" className="w-full py-20 md:py-28 lg:py-32 bg-background">
+        <section id="faq" className="w-full py-20 md:py-28 lg:py-32 bg-card">
             <div className="container mx-auto px-4 md:px-6 max-w-3xl">
                  <div className="text-center mb-12">
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight">أسئلة شائعة</h2>
@@ -158,7 +225,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="bg-card border-t py-6">
+      <footer className="bg-background border-t py-6">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} جيمكو. جميع الحقوق محفوظة.</p>
         </div>
@@ -166,3 +233,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

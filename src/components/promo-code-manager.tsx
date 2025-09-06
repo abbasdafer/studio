@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -47,7 +48,7 @@ import { Skeleton } from "./ui/skeleton";
 export type PromoCode = {
   id: string;
   code: string;
-  type: "monthly" | "yearly";
+  type: "monthly" | "6-months" | "yearly";
   status: "active" | "used";
   uses: number;
   maxUses: number;
@@ -57,7 +58,7 @@ export function PromoCodeManager() {
   const { toast } = useToast();
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isDialogOpen, setDialogOpen] = useState(false);
-  const [newCode, setNewCode] = useState({ code: "", type: "monthly" as "monthly" | "yearly", maxUses: "1" });
+  const [newCode, setNewCode] = useState({ code: "", type: "monthly" as PromoCode['type'], maxUses: "1" });
   const [loading, setLoading] = useState(true);
 
   const fetchPromoCodes = async () => {
@@ -79,10 +80,14 @@ export function PromoCodeManager() {
 
   useEffect(() => {
     fetchPromoCodes();
-  }, [toast]);
+  }, []);
 
   const generateRandomCode = () => {
-    const typePrefix = newCode.type === "monthly" ? "MONTHLY" : "YEARLY";
+    let typePrefix = "CODE";
+    if (newCode.type === "monthly") typePrefix = "MONTH";
+    else if (newCode.type === "6-months") typePrefix = "6MONTH";
+    else if (newCode.type === "yearly") typePrefix = "YEAR";
+    
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
     setNewCode(prev => ({...prev, code: `${typePrefix}${randomPart}`}));
   };
@@ -126,6 +131,15 @@ export function PromoCodeManager() {
         toast({ variant: 'destructive', title: 'خطأ', description: 'لا يمكن حذف رمز الاشتراك.' });
     }
   };
+  
+  const translateType = (type: PromoCode['type']) => {
+    switch (type) {
+        case 'monthly': return 'شهري';
+        case '6-months': return '6 أشهر';
+        case 'yearly': return 'سنوي';
+        default: return type;
+    }
+  }
 
   return (
     <Card>
@@ -156,17 +170,18 @@ export function PromoCodeManager() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="code" className="text-right">الكود</Label>
-                  <Input id="code" value={newCode.code} onChange={e => setNewCode({...newCode, code: e.target.value.trim()})} className="col-span-2" />
+                  <Input id="code" value={newCode.code} onChange={e => setNewCode({...newCode, code: e.target.value.trim().toUpperCase()})} className="col-span-2" />
                   <Button variant="outline" size="sm" onClick={generateRandomCode}>عشوائي</Button>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="type" className="text-right">النوع</Label>
-                  <Select value={newCode.type} onValueChange={v => setNewCode({...newCode, type: v as "monthly" | "yearly"})}>
+                  <Select value={newCode.type} onValueChange={v => setNewCode({...newCode, type: v as PromoCode['type']})}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="اختر النوع" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="monthly">اشتراك شهري</SelectItem>
+                      <SelectItem value="6-months">اشتراك 6 أشهر</SelectItem>
                       <SelectItem value="yearly">اشتراك سنوي</SelectItem>
                     </SelectContent>
                   </Select>
@@ -214,10 +229,10 @@ export function PromoCodeManager() {
                 ) : (
                 promoCodes.map((promo) => (
                 <TableRow key={promo.id}>
-                    <TableCell className="font-medium">{promo.code}</TableCell>
-                    <TableCell>{promo.type === 'monthly' ? 'شهري' : 'سنوي'}</TableCell>
+                    <TableCell className="font-mono font-medium">{promo.code}</TableCell>
+                    <TableCell>{translateType(promo.type)}</TableCell>
                     <TableCell>
-                    <Badge variant={promo.uses >= promo.maxUses ? "secondary" : "default"} className={promo.uses >= promo.maxUses ? '' : 'bg-green-500/20 text-green-700 hover:bg-green-500/30'}>{promo.uses >= promo.maxUses ? 'مستخدم' : 'نشط'}</Badge>
+                    <Badge variant={promo.uses >= promo.maxUses ? "secondary" : "default"} className={promo.uses >= promo.maxUses ? '' : 'bg-green-500/20 text-green-700 hover:bg-green-500/30'}>{promo.uses >= promo.maxUses ? 'مستخدم بالكامل' : 'نشط'}</Badge>
                     </TableCell>
                     <TableCell>{promo.uses} / {promo.maxUses}</TableCell>
                     <TableCell>
@@ -247,3 +262,5 @@ export function PromoCodeManager() {
     </Card>
   );
 }
+
+    
