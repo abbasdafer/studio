@@ -3,16 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Shield, TicketPercent, Users, Send } from 'lucide-react';
+import { Shield, TicketPercent } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { UserNav } from '@/components/user-nav';
 
 
 const navLinks = [
-    { href: '/admin/users', label: 'المستخدمون', icon: Users },
     { href: '/admin/promo-codes', label: 'أكواد التفعيل', icon: TicketPercent },
-    { href: '/admin/notifications', label: 'الإشعارات', icon: Send },
 ];
 
 
@@ -27,7 +25,7 @@ export default function AdminLayout({
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
        <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r bg-background sm:flex">
         <div className="flex h-16 items-center border-b px-6">
-            <Link href="/admin/users" className="flex items-center gap-2 font-semibold">
+            <Link href="/admin/promo-codes" className="flex items-center gap-2 font-semibold">
                 <Shield className="h-6 w-6 text-primary" />
                 <span>لوحة تحكم المسؤول</span>
             </Link>
@@ -52,7 +50,7 @@ export default function AdminLayout({
             <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                 {/* Mobile Menu */}
                 <div className='sm:hidden'>
-                     <Link href="/admin/users" className="flex items-center gap-2 font-semibold">
+                     <Link href="/admin/promo-codes" className="flex items-center gap-2 font-semibold">
                         <Shield className="h-6 w-6 text-primary" />
                     </Link>
                 </div>
@@ -84,4 +82,3 @@ export default function AdminLayout({
     </div>
   );
 }
-

@@ -19,7 +19,6 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { NotificationBell } from "./notification-bell";
 
 export function UserNav() {
   const router = useRouter();
@@ -53,7 +52,6 @@ export function UserNav() {
 
   return (
     <div className="flex items-center gap-4">
-        <NotificationBell userId={user.uid} />
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">

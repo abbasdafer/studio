@@ -80,7 +80,7 @@ export function PromoCodeManager() {
 
   useEffect(() => {
     fetchPromoCodes();
-  }, [toast]);
+  }, []);
 
   const generateRandomCode = () => {
     let typePrefix = "CODE";
