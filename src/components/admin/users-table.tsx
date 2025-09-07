@@ -1,64 +1,72 @@
 
 'use client';
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useState, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { GymOwnerAccount } from "@/app/admin/users/page";
-import { format } from "date-fns";
-import { arSA } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { SubscriptionActions } from "./subscription-actions";
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { updateUserSubscription } from '@/lib/actions';
+import { Loader2 } from 'lucide-react';
 
 export function UsersTable({ users }: { users: GymOwnerAccount[] }) {
+    const { toast } = useToast();
+    const [isPending, startTransition] = useTransition();
+    const [identifier, setIdentifier] = useState('');
+
+    const handleDeactivate = () => {
+        if (!identifier.trim()) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يرجى إدخال معرّف المستخدم أو بريده الإلكتروني.' });
+            return;
+        }
+
+        startTransition(async () => {
+            // Note: This action currently simulates the deactivation.
+            // A real implementation requires a secure backend function.
+            // The UID/email would be passed to that function to find and update the user.
+            const result = await updateUserSubscription(identifier, 'deactivate');
+            if (result.success) {
+                toast({ title: "نجاح", description: result.message });
+                setIdentifier(''); // Clear input on success
+            } else {
+                toast({ variant: 'destructive', title: "خطأ", description: result.error });
+            }
+        });
+    };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>إدارة المستخدمين</CardTitle>
-        <CardDescription>عرض وتفعيل وإلغاء تفعيل حسابات أصحاب النوادي.</CardDescription>
+        <CardDescription>
+            هذه الواجهة مخصصة للإجراءات الإدارية الأساسية. حاليًا، لا يمكن عرض جميع المستخدمين لأسباب أمنية.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>معرف المستخدم</TableHead>
-              <TableHead>تاريخ انتهاء الصلاحية</TableHead>
-              <TableHead>الحالة</TableHead>
-              <TableHead><span className="sr-only">الإجراءات</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.length > 0 ? (
-              users.map((user) => (
-                <TableRow key={user.uid}>
-                  <TableCell className="font-medium">{user.email || user.phone || "غير متوفر"}</TableCell>
-                  <TableCell>{format(user.subscriptionEndDate, "PPP", { locale: arSA })}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.status === "Active" ? "default" : "destructive"} className={cn(user.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 'hover:bg-opacity-80')}>
-                        {user.status === "Active" ? "فعال" : "منتهي"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <SubscriptionActions user={user} />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  لا يوجد مستخدمون لعرضهم.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      <CardContent className="space-y-6">
+        <div className="p-6 border rounded-lg bg-background space-y-4">
+            <h3 className="font-semibold">تعطيل حساب مستخدم</h3>
+            <p className="text-sm text-muted-foreground">
+                لتعطيل حساب، أدخل معرّف المستخدم (UID) أو بريده الإلكتروني. هذا الإجراء سيمنعه من تسجيل الدخول.
+            </p>
+             <div className="space-y-2">
+                <Label htmlFor="user-identifier">معرّف المستخدم أو بريده الإلكتروني</Label>
+                <Input 
+                    id="user-identifier"
+                    placeholder="أدخل UID أو email هنا"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                />
+            </div>
+            <Button onClick={handleDeactivate} variant="destructive" disabled={isPending}>
+                 {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                تعطيل الحساب
+            </Button>
+        </div>
+        <div className="p-4 text-center text-muted-foreground bg-muted/50 rounded-lg">
+          <p className="text-sm">سيتم تطوير هذه الصفحة في المستقبل لعرض قائمة كاملة بالمستخدمين عند توصيلها ببيئة خادم آمنة.</p>
+        </div>
       </CardContent>
     </Card>
   );

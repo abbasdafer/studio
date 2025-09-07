@@ -3,6 +3,7 @@
 
 import { UsersTable } from '@/components/admin/users-table';
 
+// This type definition remains useful for structuring data if we fetch a single user.
 export type GymOwnerAccount = {
   uid: string;
   email?: string;
@@ -21,7 +22,7 @@ export default async function AdminUsersPage() {
   // The function would verify that the caller is an admin and then return the user list.
   //
   // For now, we return an empty array to prevent the app from crashing due to
-  // permission errors. The UI will correctly display "No users to show".
+  // permission errors. The UI will correctly display the simplified management interface.
 
   const owners: GymOwnerAccount[] = [];
 
