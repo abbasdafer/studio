@@ -18,10 +18,12 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
+import { NotificationBell } from "./notification-bell";
 
 export function UserNav() {
   const router = useRouter();
-  const [user, loading, error] = useAuthState(auth);
+  const { user, loading } = useAuth();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -50,51 +52,52 @@ export function UserNav() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
-             {/* You can add user avatar logic here later */}
-            <AvatarFallback>{getInitials(user.email, user.phoneNumber)}</AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">مدير النادي</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email || user.phoneNumber}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-             <Link href="/dashboard/profits">
-                <LineChart className="ml-2 h-4 w-4" />
-                <span>الأرباح</span>
-             </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <User className="ml-2 h-4 w-4" />
-            <span>الملف الشخصي</span>
-          </DropdownMenuItem>
-           <DropdownMenuItem asChild>
-             <Link href="/dashboard/settings">
-                <Settings className="ml-2 h-4 w-4" />
-                <span>الإعدادات</span>
-             </Link>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="ml-2 h-4 w-4" />
-          <span>تسجيل الخروج</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-4">
+        <NotificationBell userId={user.uid} />
+        <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+            <Avatar className="h-9 w-9">
+                {/* You can add user avatar logic here later */}
+                <AvatarFallback>{getInitials(user.email, user.phoneNumber)}</AvatarFallback>
+            </Avatar>
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">مدير النادي</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                {user.email || user.phoneNumber}
+                </p>
+            </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+                <Link href="/dashboard/profits">
+                    <LineChart className="ml-2 h-4 w-4" />
+                    <span>الأرباح</span>
+                </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled>
+                <User className="ml-2 h-4 w-4" />
+                <span>الملف الشخصي</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+                <Link href="/dashboard/settings">
+                    <Settings className="ml-2 h-4 w-4" />
+                    <span>الإعدادات</span>
+                </Link>
+            </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="ml-2 h-4 w-4" />
+            <span>تسجيل الخروج</span>
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+        </DropdownMenu>
+    </div>
   );
 }
-
-    
