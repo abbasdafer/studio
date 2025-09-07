@@ -3,7 +3,6 @@
 
 import { UsersTable } from '@/components/admin/users-table';
 
-// NOTE: This type is kept for future implementation with a secure backend.
 export type GymOwnerAccount = {
   uid: string;
   email?: string;

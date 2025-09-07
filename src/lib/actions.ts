@@ -1,16 +1,28 @@
 
 'use server';
 
-import { collection, getDocs, writeBatch, serverTimestamp, doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
+import { collection, getDocs, writeBatch, serverTimestamp, doc, updateDoc, Timestamp, getDoc, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { revalidatePath } from "next/cache";
 
-export type GymOwner = {
-    uid: string;
-    email?: string;
-    phone?: string;
-    subscriptionEndDate: Timestamp;
-};
+// IMPORTANT: The functions in this file require special setup to work correctly.
+// Admin actions like sending notifications to all users or updating other users'
+// subscriptions cannot be done safely from the client or a standard server action.
+// They violate security rules because one user should not be ableto write to another user's data.
+//
+// The CORRECT and SECURE way to implement these features is by using
+// Firebase Cloud Functions with the Firebase Admin SDK. The Admin SDK runs in a
+// trusted environment on Google's servers and has god-like privileges to bypass
+// security rules.
+//
+// The code below is structured to call these (currently non-existent) Cloud Functions.
+// To make these features work, you would need to:
+// 1. Set up a Cloud Functions environment in your Firebase project.
+// 2. Write and deploy HTTP-callable functions for `sendNotification` and `updateUserSubscription`.
+// 3. Secure these functions to ensure only authorized admins can call them.
+//
+// The current implementation will log actions to the console for simulation purposes
+// and will not throw permission errors.
 
 export async function sendNotification(prevState: any, formData: FormData): Promise<{success: boolean, message?: string, error?: string}> {
     const message = formData.get('message') as string;
@@ -21,20 +33,26 @@ export async function sendNotification(prevState: any, formData: FormData): Prom
     }
 
     try {
-        // This is a placeholder for a secure, backend-driven notification system.
-        // A proper implementation would use Firebase Admin SDK in a secure environment (e.g., Cloud Function).
-        console.log(`SIMULATING NOTIFICATION: Target: '${target}', Message: "${message}"`);
+        // In a real implementation, this would call an HTTP Cloud Function.
+        // For example:
+        // const response = await fetch('https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/sendNotification', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` },
+        //   body: JSON.stringify({ message, target }),
+        // });
+        // if (!response.ok) throw new Error('Server-side error.');
+
+        console.log(`[ADMIN ACTION SIMULATION] Queuing notification for '${target}' users. Message: "${message}"`);
         
-        // Simulating a successful queue for the UI.
-        revalidatePath('/admin/notifications'); // Revalidate to clear form if needed
-        return { success: true, message: `تم وضع الإشعار في قائمة الانتظار للإرسال.` };
+        revalidatePath('/admin/notifications');
+        return { success: true, message: `تم وضع الإشعار في قائمة الانتظار للإرسال بنجاح (محاكاة).` };
 
     } catch (error) {
         console.error("Error sending notification:", error);
-        // In a real scenario, you'd handle different error types.
         return { success: false, error: 'فشل إرسال الإشعار.' };
     }
 }
+
 
 export async function updateUserSubscription(userId: string, subscriptionType: 'monthly' | '6-months' | 'yearly' | 'deactivate') {
     if (!userId || !subscriptionType) {
@@ -42,14 +60,17 @@ export async function updateUserSubscription(userId: string, subscriptionType: '
     }
 
     try {
-        // This is a placeholder for a secure, backend-driven admin action.
-        // The original implementation had a permissions issue because a client-side
-        // SDK was trying to write to documents owned by other users.
-        // A proper implementation would use Firebase Admin SDK in a secure environment (e.g., Cloud Function).
-        console.log(`SIMULATING SUBSCRIPTION UPDATE: UserID: ${userId}, Type: ${subscriptionType}`);
+        // In a real implementation, this would call an HTTP Cloud Function.
+        // For example:
+        // const response = await fetch('https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/updateUserSubscription', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` },
+        //   body: JSON.stringify({ userId, subscriptionType }),
+        // });
+        // if (!response.ok) throw new Error('Server-side error.');
+
+        console.log(`[ADMIN ACTION SIMULATION] Updating subscription for UserID: ${userId}, Type: ${subscriptionType}`);
         
-        // Simulating a successful update for the UI.
-        // To see the change, a real Admin backend is needed.
         revalidatePath('/admin/users');
         return { success: true, message: `تمت محاكاة تحديث اشتراك المستخدم بنجاح.` };
 
