@@ -35,12 +35,12 @@ export default function NotificationsPage() {
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state?.success) {
-      toast({ title: "نجاح", description: state.message });
-      formRef.current?.reset();
-    } else if (state?.error) {
-      toast({ variant: "destructive", title: "خطأ", description: state.error });
-    }
+      if (state?.success && state.message) {
+        toast({ title: "نجاح", description: state.message });
+        formRef.current?.reset();
+      } else if (state?.error) {
+        toast({ variant: "destructive", title: "خطأ", description: state.error });
+      }
   }, [state, toast]);
 
   return (

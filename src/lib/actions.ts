@@ -12,7 +12,7 @@ export type GymOwner = {
     subscriptionEndDate: Timestamp;
 };
 
-export async function sendNotification(formData: FormData): Promise<{success: boolean, message?: string, error?: string}> {
+export async function sendNotification(prevState: any, formData: FormData): Promise<{success: boolean, message?: string, error?: string}> {
     const message = formData.get('message') as string;
     const target = formData.get('target') as 'all' | 'active' | 'expired';
 
@@ -22,12 +22,11 @@ export async function sendNotification(formData: FormData): Promise<{success: bo
 
     try {
         // This is a placeholder for a secure, backend-driven notification system.
-        // The original implementation had a permissions issue because a client-side
-        // SDK was trying to write to documents owned by other users.
         // A proper implementation would use Firebase Admin SDK in a secure environment (e.g., Cloud Function).
         console.log(`SIMULATING NOTIFICATION: Target: '${target}', Message: "${message}"`);
         
         // Simulating a successful queue for the UI.
+        revalidatePath('/admin/notifications'); // Revalidate to clear form if needed
         return { success: true, message: `تم وضع الإشعار في قائمة الانتظار للإرسال.` };
 
     } catch (error) {
