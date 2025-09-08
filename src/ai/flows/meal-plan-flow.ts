@@ -52,7 +52,17 @@ const MealPlanOutputSchema = z.object({
 export type MealPlanOutput = z.infer<typeof MealPlanOutputSchema>;
 
 export async function generateMealPlan(input: MealPlanInput): Promise<MealPlanOutput> {
-  return generateMealPlanFlow(input);
+  try {
+    const plan = await generateMealPlanFlow(input);
+    if (!plan) {
+      throw new Error("Received an empty response from the AI model.");
+    }
+    return plan;
+  } catch (err) {
+    console.error("[AI_FLOW_ERROR] Failed to generate meal plan:", err);
+    // Re-throw a user-friendly error to be caught by the client
+    throw new Error("An unexpected error occurred while communicating with the AI service. Please check the server logs for details.");
+  }
 }
 
 const prompt = ai.definePrompt({
@@ -91,5 +101,3 @@ const generateMealPlanFlow = ai.defineFlow(
     return output;
   }
 );
-
-    
