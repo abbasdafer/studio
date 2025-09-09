@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { AuthForm } from "@/components/auth-form";
@@ -129,19 +130,21 @@ export default function Home() {
         <section id="hero" className="w-full py-20 md:py-32 lg:py-40">
           <div className="container mx-auto px-4 md:px-6 text-center">
             <div className="max-w-3xl mx-auto">
-              <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="flex items-center justify-center gap-4 mb-6 animate-slide-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'backwards' }}>
                 <Dumbbell className="h-16 w-16 text-primary" />
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter text-foreground">
                   جيمكو
                 </h1>
               </div>
-              <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-8">
+              <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-8 animate-slide-in-up" style={{ animationDelay: '0.4s', animationFillMode: 'backwards' }}>
                 الحل الرقمي الأول في العراق لإدارة النوادي الرياضية. ركز على متدربيك ودعنا نهتم بالاشتراكات، الديون، والخطط الغذائية.
               </p>
-               <Button size="lg" onClick={() => { setActiveTab('signup'); setAuthOpen(true); }}>
-                    <Zap className="ml-2 h-5 w-5" />
-                    ابدأ الآن مع 14 يوم مجاني
-                </Button>
+               <div className="animate-slide-in-up" style={{ animationDelay: '0.6s', animationFillMode: 'backwards' }}>
+                 <Button size="lg" onClick={() => { setActiveTab('signup'); setAuthOpen(true); }}>
+                      <Zap className="ml-2 h-5 w-5" />
+                      ابدأ الآن مع 14 يوم مجاني
+                  </Button>
+               </div>
             </div>
           </div>
         </section>
@@ -149,13 +152,13 @@ export default function Home() {
         {/* Features Section */}
         <section id="features" className="w-full py-20 md:py-28 lg:py-32 bg-card">
             <div className="container mx-auto px-4 md:px-6">
-                <div className="text-center max-w-2xl mx-auto">
+                <div className="text-center max-w-2xl mx-auto animate-fade-in">
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight">مصمم خصيصاً ليناسب احتياجات الجيم العراقي</h2>
                     <p className="mt-4 text-lg text-muted-foreground">أدوات قوية وبسيطة لحل المشاكل اليومية التي تواجهها.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
                     {features.map((feature, index) => (
-                        <div key={index} className="bg-background p-6 rounded-lg shadow-md text-center flex flex-col items-center">
+                        <div key={index} className="bg-background p-6 rounded-lg shadow-md text-center flex flex-col items-center animate-slide-in-up" style={{ animationDelay: `${0.2 * (index + 1)}s`, animationFillMode: 'backwards' }}>
                             <div className="mb-4 bg-primary/10 p-4 rounded-full">
                                 {feature.icon}
                             </div>
@@ -170,13 +173,13 @@ export default function Home() {
          {/* Pricing Section */}
         <section id="pricing" className="w-full py-20 md:py-28 lg:py-32 bg-background">
             <div className="container mx-auto px-4 md:px-6">
-                 <div className="text-center max-w-2xl mx-auto">
+                 <div className="text-center max-w-2xl mx-auto animate-fade-in">
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight">خطط أسعار مرنة</h2>
                     <p className="mt-4 text-lg text-muted-foreground">اختر الخطة التي تناسب حجم وطموح ناديك. ابدأ مجاناً لمدة 14 يومًا باستخدام الرمز <code className="font-mono bg-muted text-primary px-1.5 py-0.5 rounded-md">GIFT</code>.</p>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-12 max-w-5xl mx-auto">
                     {pricingPlans.map((plan, index) => (
-                        <Card key={index} className={cn("flex flex-col", plan.isPopular && "border-primary ring-2 ring-primary shadow-lg")}>
+                        <Card key={index} className={cn("flex flex-col animate-slide-in-up", plan.isPopular && "border-primary ring-2 ring-primary shadow-lg")} style={{ animationDelay: `${0.2 * (index + 1)}s`, animationFillMode: 'backwards' }}>
                            {plan.isPopular && (
                                 <div className="bg-primary text-primary-foreground text-center py-1.5 text-sm font-semibold rounded-t-lg">الأكثر شيوعاً</div>
                             )}
@@ -207,13 +210,13 @@ export default function Home() {
         {/* FAQ Section */}
         <section id="faq" className="w-full py-20 md:py-28 lg:py-32 bg-card">
             <div className="container mx-auto px-4 md:px-6 max-w-3xl">
-                 <div className="text-center mb-12">
+                 <div className="text-center mb-12 animate-fade-in">
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight">أسئلة شائعة</h2>
                     <p className="mt-4 text-lg text-muted-foreground">لديك أسئلة؟ لدينا إجابات.</p>
                 </div>
                 <Accordion type="single" collapsible className="w-full">
                     {faqs.map((faq, index) => (
-                         <AccordionItem key={index} value={`item-${index+1}`}>
+                         <AccordionItem key={index} value={`item-${index+1}`} className="animate-slide-in-up" style={{ animationDelay: `${0.1 * (index + 1)}s`, animationFillMode: 'backwards' }}>
                             <AccordionTrigger className="text-lg font-semibold text-right">{faq.question}</AccordionTrigger>
                             <AccordionContent className="text-muted-foreground text-base">
                             {faq.answer}
