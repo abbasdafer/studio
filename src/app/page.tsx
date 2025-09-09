@@ -170,75 +170,8 @@ export default function Home() {
             </div>
         </section>
 
-        {/* Comparison Section */}
-        <section id="comparison" className="w-full py-20 md:py-28 lg:py-32 bg-background">
-            <div className="container mx-auto px-4 md:px-6">
-                <div className="text-center max-w-2xl mx-auto animate-fade-in">
-                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight">تخلص من الدفاتر، ورحب بالكفاءة</h2>
-                    <p className="mt-4 text-lg text-muted-foreground">شاهد الفرق الذي يمكن أن يحدثه جيمكو في إدارة ناديك اليومية.</p>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12 max-w-5xl mx-auto">
-                    {/* Traditional Way */}
-                    <Card className="animate-slide-in-up" style={{ animationDelay: '0.4s', animationFillMode: 'backwards' }}>
-                        <CardHeader>
-                            <CardTitle className="text-center text-xl text-destructive">الطريقة التقليدية</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <Image src="https://picsum.photos/600/400?grayscale" alt="دفتر ورقي وقلم" width={600} height={400} className="rounded-lg aspect-video object-cover" data-ai-hint="messy desk paper" />
-                            <ul className="space-y-3 pt-4">
-                                <li className="flex items-center gap-2">
-                                    <XCircle className="h-5 w-5 text-destructive" />
-                                    <span>أوراق متناثرة وسجلات ضائعة.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <XCircle className="h-5 w-5 text-destructive" />
-                                    <span>صعوبة في متابعة ديون الأعضاء.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <XCircle className="h-5 w-5 text-destructive" />
-                                    <span>حسابات يدوية معقدة للأرباح.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <XCircle className="h-5 w-5 text-destructive" />
-                                    <span>عدم وجود رؤية واضحة لأداء النادي.</span>
-                                </li>
-                            </ul>
-                        </CardContent>
-                    </Card>
-
-                    {/* Gymco Way */}
-                    <Card className="border-primary ring-2 ring-primary shadow-lg animate-slide-in-up" style={{ animationDelay: '0.6s', animationFillMode: 'backwards' }}>
-                        <CardHeader>
-                            <CardTitle className="text-center text-xl text-primary">طريقة جيمكو</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <Image src="https://picsum.photos/600/400" alt="شاشة تطبيق جيمكو" width={600} height={400} className="rounded-lg aspect-video object-cover" data-ai-hint="clean dashboard ui" />
-                             <ul className="space-y-3 pt-4">
-                                <li className="flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span>كل بيانات أعضائك في مكان واحد آمن.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span>تتبع سهل للديون بضغطة زر.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span>تقارير وأرباح تلقائية ودقيقة.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span>إنشاء خطط غذائية ذكية في ثوانٍ.</span>
-                                </li>
-                            </ul>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </section>
-
          {/* Pricing Section */}
-        <section id="pricing" className="w-full py-20 md:py-28 lg:py-32 bg-card">
+        <section id="pricing" className="w-full py-20 md:py-28 lg:py-32 bg-background">
             <div className="container mx-auto px-4 md:px-6">
                  <div className="text-center max-w-2xl mx-auto animate-fade-in">
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight">خطط أسعار مرنة</h2>
@@ -275,7 +208,7 @@ export default function Home() {
         </section>
 
         {/* FAQ Section */}
-        <section id="faq" className="w-full py-20 md:py-28 lg:py-32 bg-background">
+        <section id="faq" className="w-full py-20 md:py-28 lg:py-32 bg-card">
             <div className="container mx-auto px-4 md:px-6 max-w-3xl">
                  <div className="text-center mb-12 animate-fade-in">
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight">أسئلة شائعة</h2>
@@ -295,7 +228,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="bg-card border-t py-6">
+      <footer className="bg-background border-t py-6">
         <div className="container mx-auto px-4 md:px-6 text-center text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} جيمكو. جميع الحقوق محفوظة.</p>
         </div>
