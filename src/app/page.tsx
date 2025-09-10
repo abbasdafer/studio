@@ -104,17 +104,18 @@ export default function Home() {
                 <Dumbbell className="h-6 w-6 text-primary" />
                 <span className="font-bold text-lg">جيمكو</span>
             </div>
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" asChild>
+            <div className="flex items-center gap-1 sm:gap-2">
+                <Button variant="ghost" size="sm" asChild>
                     <Link href="/mohammed">محمد</Link>
                 </Button>
-                 <Button variant="ghost" onClick={() => { setActiveTab('login'); setAuthOpen(true); }}>
-                    <LogIn className="ml-2 h-4 w-4" />
-                    تسجيل الدخول
+                 <Button variant="ghost" size="sm" onClick={() => { setActiveTab('login'); setAuthOpen(true); }}>
+                    <LogIn className="ml-1 h-4 w-4" />
+                    <span className="hidden sm:inline">دخول</span>
                 </Button>
-                <Button onClick={() => { setActiveTab('signup'); setAuthOpen(true); }}>
-                    <UserPlus className="ml-2 h-4 w-4" />
-                    إنشاء حساب
+                <Button size="sm" onClick={() => { setActiveTab('signup'); setAuthOpen(true); }}>
+                    <UserPlus className="ml-1 h-4 w-4" />
+                     <span className="hidden sm:inline">حساب جديد</span>
+                     <span className="sm:hidden">ابدأ</span>
                 </Button>
             </div>
         </div>
