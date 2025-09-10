@@ -23,6 +23,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 
 const features = [
@@ -104,6 +105,9 @@ export default function Home() {
                 <span className="font-bold text-lg">جيمكو</span>
             </div>
             <div className="flex items-center gap-2">
+                <Button variant="ghost" asChild>
+                    <Link href="/mohammed">محمد</Link>
+                </Button>
                  <Button variant="ghost" onClick={() => { setActiveTab('login'); setAuthOpen(true); }}>
                     <LogIn className="ml-2 h-4 w-4" />
                     تسجيل الدخول
